@@ -1,5 +1,6 @@
 import Foundation
 import CloudKit
+import Security
 
 @MainActor
 public final class CloudKitSyncService: ObservableObject {
@@ -7,20 +8,44 @@ public final class CloudKitSyncService: ObservableObject {
 
     @Published public var isSyncing: Bool = false
     @Published public var lastSyncDate: Date? = nil
-    @Published public var syncStatusMessage: String = "Ready"
+    @Published public var syncStatusMessage: String = "Local Storage"
     @Published public var isCloudKitAvailable: Bool = false
 
     private let containerIdentifier = "iCloud.app.notesmy.mac"
-    private var container: CKContainer {
-        CKContainer(identifier: containerIdentifier)
+
+    public var isEntitled: Bool {
+        guard let task = SecTaskCreateFromSelf(nil) else { return false }
+        guard let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-container-identifiers" as CFString, nil) else {
+            return false
+        }
+        if let array = value as? [String] {
+            return array.contains(containerIdentifier)
+        }
+        return false
+    }
+
+    private var container: CKContainer? {
+        guard isEntitled else { return nil }
+        return CKContainer(identifier: containerIdentifier)
     }
 
     private init() {
-        checkAccountStatus()
+        if isEntitled {
+            checkAccountStatus()
+        } else {
+            isCloudKitAvailable = false
+            syncStatusMessage = "Local Storage"
+        }
     }
 
     public func checkAccountStatus() {
-        container.accountStatus { [weak self] status, error in
+        guard isEntitled, let c = container else {
+            isCloudKitAvailable = false
+            syncStatusMessage = "Local Storage"
+            return
+        }
+
+        c.accountStatus { [weak self] status, error in
             Task { @MainActor [weak self] in
                 switch status {
                 case .available:
@@ -46,15 +71,15 @@ public final class CloudKitSyncService: ObservableObject {
     }
 
     public func syncNotes() async {
-        guard isCloudKitAvailable else {
-            syncStatusMessage = "iCloud unavailable. Using offline local storage."
+        guard isEntitled, isCloudKitAvailable, let c = container else {
+            syncStatusMessage = "Local Storage"
             return
         }
 
         isSyncing = true
         syncStatusMessage = "Syncing with iCloud..."
 
-        let privateDB = container.privateCloudDatabase
+        let privateDB = c.privateCloudDatabase
         let store = NoteStore.shared
 
         // Prepare records to upload from local store

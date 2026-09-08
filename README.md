@@ -31,17 +31,36 @@
   <img src="https://img.shields.io/badge/License-Apache%202.0-yellow?style=for-the-badge" alt="Apache 2.0" />
 </p>
 
+---
+
+## 🎬 Live Cinematic Demo
+
 <p align="center">
-  <img src="assets/hero_banner.jpg" alt="NotesMy macOS App Hero Banner" width="100%" />
+  <img src="assets/demo.gif" alt="NotesMy Live Demo" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.25);" />
+</p>
+<p align="center">
+  <em>High-definition screen recording of NotesMy sliding smoothly from the screen edge, quick note captures, interactive sticky board, and instant OCR. (<a href="assets/demo.mp4">Download 60fps MP4</a>)</em>
 </p>
 
 ---
 
 ## ⚡ What is NotesMy?
 
-**NotesMy** combines the speed of screen-edge scratchpads (like *Unclutter* and *SideNotes*) with the cognitive power of modern Personal Knowledge Management systems (like *Obsidian* and *Apple Intelligence*). 
+**NotesMy** is an ultra-fast, native macOS sticky notes and personal knowledge management application. It bridges the gap between quick scratchpads (like *Unclutter* and *SideNotes*) and deep knowledge bases (like *Obsidian* and *Apple Notes*).
 
-Built 100% natively using **Swift 6, SwiftUI, and AppKit**, NotesMy runs unobtrusively in your menu bar and slides in gracefully from the screen edge whenever you need it.
+Built 100% natively using **Swift 6, SwiftUI, and AppKit**, NotesMy stays out of your way in your menu bar and slides in gracefully from the screen edge whenever you summon it.
+
+### ✨ Key Highlights
+
+- 🪟 **Edge-Docked Deck:** Hover or gesture over the screen edge to reveal all your active notes in an animated, fanned-card dock.
+- 🗑️ **Quick Delete & Inactive Notes Cleanup:** One-click instant deletion right on note cards, plus intelligent automated detection and archiving of stale notes unused for >30 days.
+- ⚙️ **Safe Maintenance:** Safe window close handling (red close button never quits the app) and a two-stage confirmed data reset danger zone.
+- 🧠 **AI Second Brain & Knowledge Graph:** Connect your thoughts using `[[WikiLinks]]`, chat conversationally with your notes collection, and explore your ideas on a 2D interactive force-directed graph.
+- 🔍 **Screen OCR & Vision AI:** Snip any area of your display (crosshair selection) to extract clean text into your clipboard or note instantly.
+- 🎙️ **On-Device Voice Transcription:** Real-time speech-to-text supporting 12 languages with zero latency and zero privacy risk.
+- 📌 **Freeform Sticky Board:** Arrange notes as colorful sticky cards on an infinite zoomable, draggable corkboard canvas.
+- 🎨 **Minimalist Pastel Palettes:** 6 carefully calibrated macOS pastel colors, rich markdown formatting, checklists, and code snippet highlighting.
+- 🛡️ **Zero Telemetry & 100% Offline:** No tracking, no user profiling, no third-party cloud. All NLP and OCR models run strictly on Apple Silicon and Intel neural hardware.
 
 ---
 
@@ -72,27 +91,27 @@ Prefer a direct DMG download? Grab the latest Universal binary from [GitHub Rele
 
 ---
 
-## 📸 Feature Showcase
+## 📸 Real Application Showcase
 
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Edge-Docked & Categorized Notes</h3>
-      <img src="assets/feature_notes.jpg" alt="Notes list view" width="100%" />
+      <h3 align="center">🗂️ All Notes & Semantic Search</h3>
+      <img src="assets/preview-allnotes.png" alt="NotesMy All Notes Window" width="100%" />
     </td>
     <td width="50%">
-      <h3 align="center">🧠 AI Second Brain & Knowledge Graph</h3>
-      <img src="assets/feature_ai.jpg" alt="Second Brain and Knowledge Graph" width="100%" />
+      <h3 align="center">🪟 Screen-Edge Floating Deck</h3>
+      <img src="assets/preview-edge-deck.png" alt="NotesMy Edge Deck Window" width="100%" />
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <h3 align="center">🎙️ Multilingual Speech-to-Text</h3>
-      <img src="assets/feature_voice.jpg" alt="Voice notes and live transcript" width="100%" />
+      <h3 align="center">📝 Minimalist Sticky Note Editor</h3>
+      <img src="assets/preview-note.png" alt="NotesMy Note Editor" width="100%" />
     </td>
     <td width="50%">
-      <h3 align="center">📌 Freeform Sticky Board Canvas</h3>
-      <img src="assets/feature_board.jpg" alt="Sticky board canvas" width="100%" />
+      <h3 align="center">🎨 Modern Pastel Customization</h3>
+      <img src="assets/app_icon_1024.png" alt="NotesMy App Icon" width="60%" style="display: block; margin: 0 auto;" />
     </td>
   </tr>
 </table>
@@ -106,20 +125,21 @@ Prefer a direct DMG download? Grab the latest Universal binary from [GitHub Rele
 | **V1 — MVP** | Text & Checklist Notes with custom pastel themes | ✅ | Native SwiftUI TextEditor |
 | **V1 — MVP** | Edge-Docked Fanned Card Deck | ✅ | AppKit Floating NSPanel |
 | **V1 — MVP** | Tags, Categories, Pinning & Favorites | ✅ | Local JSON Storage |
+| **V1 — MVP** | Quick Delete on Card Rows | ✅ | Swift Action Handler |
 | **V1 — MVP** | Clipboard History Hub (Auto-Capture) | ✅ | NSPasteboard Monitor |
 | **V1 — MVP** | Interactive Color Picker & Resizable Windows | ✅ | AppKit NSWindow + SwiftUI |
 | **V2 — Supercharged** | Multilingual Voice Notes (Speech-to-Text) | ✅ | Apple SFSpeechRecognizer |
-| **V2 — Supercharged** | Vision OCR Text Extraction from Screenshots | ✅ | Apple Vision Framework |
+| **V2 — Supercharged** | Vision OCR Text Extraction from Screen Snipping | ✅ | Apple Vision + screencapture |
 | **V2 — Supercharged** | Interactive Freeform Sticky Board Canvas | ✅ | SwiftUI Drag & Drop Canvas |
-| **V2 — Supercharged** | Apple Pencil & Mouse Freehand Sketching | ✅ | AppKit NSBezierPath Engine |
+| **V2 — Supercharged** | Inactive Notes (>30 Days) Cleanup & Archive | ✅ | Date-based Staleness Engine |
 | **V2 — Supercharged** | Natural Language Smart Date & Reminder Alerts | ✅ | NSDataDetector + UserNotifications |
 | **V2 — Supercharged** | Semantic Concept Vector Search | ✅ | Apple NaturalLanguage Embeddings |
-| **V3 — Connected** | Web Clipper from Clipboard URL | ✅ | WebKit + URLSession |
+| **V3 — Connected** | Web Clipper with Manual & Clipboard URL Fallback | ✅ | WebKit + URLSession |
 | **V3 — Connected** | One-Click Calendar Integration (.ics) | ✅ | RFC 5545 Calendar Generator |
 | **V3 — Connected** | Export to Apple Notes & Reminders | ✅ | NSSharingService + EventKit |
-| **V3 — Connected** | CloudKit Private Database Sync | ✅ | Apple CloudKit Container |
+| **V3 — Connected** | CloudKit Private Database Sync & Local Backup | ✅ | Apple CloudKit Container |
 | **V3 — Connected** | Note Version History & Time-Travel Restore | ✅ | Incremental Snapshots |
-| **V4 — Second Brain** | Interactive Node Knowledge Graph | ✅ | Graph Force Directed Layout |
+| **V4 — Second Brain** | Interactive Node Knowledge Graph with Search | ✅ | Graph Force Directed Layout |
 | **V4 — Second Brain** | Bidirectional `[[WikiLinks]]` with Backlink Index | ✅ | Regex Link Parser |
 | **V4 — Second Brain** | AI Chat with Your Notes Collection | ✅ | On-Device NaturalLanguage RAG |
 | **V4 — Second Brain** | Smart Daily Plan & Action Item Extraction | ✅ | NLP Task Extraction |
@@ -157,14 +177,43 @@ All shortcuts can be customized from **Settings → Shortcuts**:
 
 ---
 
-## 🤝 Contributing & Maintainer Policy
+## 📈 Star History
 
-We welcome community feedback, pull requests, and bug reports!
+[![Star History Chart](https://api.star-history.com/svg?repos=mehmetefeaytas/notesmy&type=Date)](https://star-history.com/#mehmetefeaytas/notesmy&Date)
 
-> [!IMPORTANT]
-> **Release Authority:** The release pipeline, DMG packaging, and Homebrew tap deployments are strictly maintainer-only and restricted to [@mehmetefeaytas](https://github.com/mehmetefeaytas).
->
-> Please read our [**CONTRIBUTING.md**](CONTRIBUTING.md) for branch naming rules (`feature/*`, `fix/*`), Conventional Commits requirements, and local testing verification steps before submitting PRs.
+---
+
+## 👥 Contributors
+
+Contributions, feature suggestions, and bug reports are warmly welcome!
+
+<a href="https://github.com/mehmetefeaytas/notesmy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=mehmetefeaytas/notesmy" alt="Contributors" />
+</a>
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, branch conventions, and testing requirements.
+
+---
+
+## 💖 Sponsors & Support
+
+If NotesMy saves you time and streamlines your macOS workflow, please consider sponsoring development or buying a coffee!
+
+<p align="center">
+  <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Support-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
+  &nbsp;&nbsp;
+  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
+</p>
+
+---
+
+## 📬 Contact & Connect
+
+Feel free to reach out for feedback, collaborations, or questions:
+
+- 📧 **Email:** [efeyapiyor@gmail.com](mailto:efeyapiyor@gmail.com)
+- 💼 **LinkedIn:** [Mehmet Efe Aytaş](https://linkedin.com/in/mehmetefeaytas)
+- 🐙 **GitHub:** [@mehmetefeaytas](https://github.com/mehmetefeaytas)
 
 ---
 

@@ -14,6 +14,8 @@ public struct PencilDrawingView: View {
     @State private var selectedColor: Color = .black
     @State private var lineWidth: CGFloat = 3.0
 
+    @ObservedObject var loc = LocalizationService.shared
+
     public init(noteId: UUID, onSave: @escaping (URL) -> Void, onDismiss: @escaping () -> Void) {
         self.noteId = noteId
         self.onSave = onSave
@@ -23,20 +25,20 @@ public struct PencilDrawingView: View {
     public var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "pencil.tip.crop.circle")
                     .foregroundColor(.accentColor)
-                Text("Freehand Sketch")
-                    .font(.system(size: 13, weight: .bold))
+                Text(loc.language == .turkish ? "Çizim & Eskiz" : "Freehand Sketch")
+                    .font(.system(size: 12, weight: .bold))
 
                 Spacer()
 
                 // Color picker
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     ForEach([Color.black, .blue, .red, .green, .orange], id: \.self) { c in
                         Circle()
                             .fill(c)
-                            .frame(width: 18, height: 18)
+                            .frame(width: 16, height: 16)
                             .overlay(
                                 Circle().stroke(selectedColor == c ? Color.white : Color.clear, lineWidth: 2)
                             )
@@ -44,29 +46,30 @@ public struct PencilDrawingView: View {
                     }
                 }
 
-                // Line width
+                // Line width slider
                 Slider(value: $lineWidth, in: 1...12)
-                    .frame(width: 70)
+                    .frame(width: 60)
 
-                Button("Clear") {
+                Button(loc.language == .turkish ? "Temizle" : "Clear") {
                     drawingImage = nil
                 }
-                .font(.system(size: 11))
+                .font(.system(size: 10))
                 .buttonStyle(.plain)
 
-                Button("Save to Note") {
+                Button(loc.language == .turkish ? "Kaydet & Kapat" : "Save & Close") {
                     saveDrawing()
                 }
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .buttonStyle(.borderedProminent)
 
-                Button("Cancel") {
+                Button(loc.language == .turkish ? "İptal" : "Cancel") {
                     onDismiss()
                 }
-                .font(.system(size: 11))
+                .font(.system(size: 10))
                 .buttonStyle(.plain)
             }
-            .padding(12)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .background(Color(nsColor: .controlBackgroundColor))
 
             Divider()
@@ -75,19 +78,23 @@ public struct PencilDrawingView: View {
             DrawingCanvasView(image: $drawingImage, strokeColor: $selectedColor, lineWidth: $lineWidth)
                 .background(Color.white)
         }
-        .frame(width: 580, height: 420)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .cornerRadius(10)
     }
 
     private func saveDrawing() {
-        guard let img = drawingImage else { onDismiss(); return }
+        guard let img = drawingImage else {
+            onDismiss()
+            return
+        }
         guard let tiff = img.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiff),
               let pngData = bitmap.representation(using: .png, properties: [:]) else {
-            onDismiss(); return
+            onDismiss()
+            return
         }
 
-        let fileName = "Sketch_\(Date().timeIntervalSince1970).png"
+        let fileName = "Sketch_\(Int(Date().timeIntervalSince1970)).png"
         let outputURL = store.attachmentsDirectory.appendingPathComponent(fileName)
         try? pngData.write(to: outputURL)
         onSave(outputURL)

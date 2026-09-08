@@ -29,12 +29,40 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     private func buildMenuItems(into menu: NSMenu) {
-        let newNoteItem = NSMenuItem(title: "New Note", action: #selector(handleNewNote), keyEquivalent: "n")
+        let isTR = LocalizationService.shared.language == .turkish
+
+        // 1. Open Main Window (Prominent at top)
+        let allNotesItem = NSMenuItem(
+            title: isTR ? "📋 Ana Pencere & Arama..." : "📋 Open Main Dashboard & Search...",
+            action: #selector(handleAllNotes),
+            keyEquivalent: "l"
+        )
+        allNotesItem.keyEquivalentModifierMask = [.option, .command]
+        allNotesItem.target = self
+        menu.addItem(allNotesItem)
+
+        // 2. New Note
+        let newNoteItem = NSMenuItem(
+            title: isTR ? "➕ Yeni Not" : "➕ New Note",
+            action: #selector(handleNewNote),
+            keyEquivalent: "n"
+        )
         newNoteItem.keyEquivalentModifierMask = [.option, .command]
         newNoteItem.target = self
         menu.addItem(newNoteItem)
 
-        let captureItem = NSMenuItem(title: "Quick Capture from Clipboard", action: #selector(handleQuickCapture), keyEquivalent: "v")
+        // 3. Screen OCR
+        let screenOCRItem = NSMenuItem(
+            title: isTR ? "🔍 Ekrandan Metin Yakala (OCR)..." : "🔍 Capture Screen Text (OCR)...",
+            action: #selector(handleScreenOCR),
+            keyEquivalent: ""
+        )
+        screenOCRItem.target = self
+        menu.addItem(screenOCRItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let captureItem = NSMenuItem(title: isTR ? "Panoyu Not Olarak Yakala" : "Quick Capture from Clipboard", action: #selector(handleQuickCapture), keyEquivalent: "v")
         captureItem.keyEquivalentModifierMask = [.option, .command]
         captureItem.target = self
         menu.addItem(captureItem)
@@ -43,7 +71,7 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         let clipboardMenu = NSMenu()
         let history = NoteStore.shared.clipboardHistory
         if history.isEmpty {
-            let empty = NSMenuItem(title: "No clipboard history", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: isTR ? "Pano geçmişi boş" : "No clipboard history", action: nil, keyEquivalent: "")
             empty.isEnabled = false
             clipboardMenu.addItem(empty)
         } else {
@@ -55,23 +83,18 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
                 clipboardMenu.addItem(item)
             }
         }
-        let clipboardMenuItem = NSMenuItem(title: "Clipboard History Hub", action: nil, keyEquivalent: "")
+        let clipboardMenuItem = NSMenuItem(title: isTR ? "Pano Geçmişi Merkezi" : "Clipboard History Hub", action: nil, keyEquivalent: "")
         clipboardMenuItem.submenu = clipboardMenu
         menu.addItem(clipboardMenuItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let toggleDeckItem = NSMenuItem(title: "Toggle Deck Visibility", action: #selector(handleToggleDeck), keyEquivalent: "h")
+        let toggleDeckItem = NSMenuItem(title: isTR ? "Kenar Çekmecesini Aç/Kapat" : "Toggle Deck Visibility", action: #selector(handleToggleDeck), keyEquivalent: "h")
         toggleDeckItem.keyEquivalentModifierMask = [.control, .option, .command]
         toggleDeckItem.target = self
         menu.addItem(toggleDeckItem)
 
-        let allNotesItem = NSMenuItem(title: "All Notes & Search...", action: #selector(handleAllNotes), keyEquivalent: "l")
-        allNotesItem.keyEquivalentModifierMask = [.option, .command]
-        allNotesItem.target = self
-        menu.addItem(allNotesItem)
-
-        let boardItem = NSMenuItem(title: "Sticky Board Canvas...", action: #selector(handleAllNotes), keyEquivalent: "b")
+        let boardItem = NSMenuItem(title: isTR ? "Mantar Pano (Sticky Board)..." : "Sticky Board Canvas...", action: #selector(handleAllNotes), keyEquivalent: "b")
         boardItem.keyEquivalentModifierMask = [.option, .command]
         boardItem.target = self
         menu.addItem(boardItem)
@@ -133,6 +156,12 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func handleQuickCapture() {
         if let note = ClipboardService.shared.captureToNewNote() {
             NoteWindowManager.shared.openNote(id: note.id)
+        }
+    }
+
+    @objc private func handleScreenOCR() {
+        Task {
+            _ = await OCRService.shared.captureScreenAndExtractText()
         }
     }
 

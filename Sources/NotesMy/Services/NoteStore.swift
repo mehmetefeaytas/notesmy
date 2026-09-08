@@ -181,15 +181,18 @@ public final class NoteStore: ObservableObject {
 
     private func startClipboardMonitor() {
         lastPasteboardChangeCount = NSPasteboard.general.changeCount
-        // Poll pasteboard every 1.5 seconds unobtrusively
-        clipboardTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+        checkPasteboard()
+        // Poll pasteboard every 1.0 second on .common RunLoop mode so menu tracking / window dragging doesn't stall it!
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.checkPasteboard()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        clipboardTimer = timer
     }
 
-    private func checkPasteboard() {
+    public func checkPasteboard() {
         let currentCount = NSPasteboard.general.changeCount
         guard currentCount != lastPasteboardChangeCount else { return }
         lastPasteboardChangeCount = currentCount
@@ -199,11 +202,24 @@ public final class NoteStore: ObservableObject {
             let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
             if !clipboardHistory.contains(clean) {
                 clipboardHistory.insert(clean, at: 0)
-                if clipboardHistory.count > 10 {
+                if clipboardHistory.count > 25 {
                     clipboardHistory.removeLast()
                 }
             }
         }
+    }
+
+    // MARK: - Category Management
+    public func addCategory(_ name: String) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, !categories.contains(clean), clean != "All" else { return }
+        categories.append(clean)
+        saveSettings()
+    }
+
+    public func removeCategory(_ name: String) {
+        categories.removeAll(where: { $0 == name })
+        saveSettings()
     }
 
     // MARK: - Computed Properties
@@ -272,10 +288,12 @@ public final class NoteStore: ObservableObject {
         return newNote
     }
 
-    public func updateNote(_ note: NoteItem) {
+    public func updateNote(_ note: NoteItem, touchUpdatedAt: Bool = true) {
         if let index = notes.firstIndex(where: { $0.id == note.id }) {
             var updated = note
-            updated.updatedAt = Date()
+            if touchUpdatedAt {
+                updated.updatedAt = Date()
+            }
             notes[index] = updated
         }
     }
@@ -441,6 +459,43 @@ public final class NoteStore: ObservableObject {
         notes.insert(deleted, at: 0)
         selectedNoteId = deleted.id
         recentlyDeletedNote = nil
+        saveNotes()
+    }
+
+    // MARK: - Stale / Inactive Notes & Total Reset
+    public func inactiveNotes(olderThanDays days: Int = 30) -> [NoteItem] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        return activeNotes.filter { $0.updatedAt < cutoff }
+    }
+
+    public func archiveInactiveNotes(olderThanDays days: Int = 30) {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        for index in notes.indices {
+            if !notes[index].isArchived && notes[index].updatedAt < cutoff {
+                notes[index].isArchived = true
+            }
+        }
+        saveNotes()
+    }
+
+    public func deleteInactiveNotes(olderThanDays days: Int = 30) {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        notes.removeAll(where: { !$0.isArchived && $0.updatedAt < cutoff })
+        selectedNoteId = activeNotes.first?.id
+        saveNotes()
+    }
+
+    public func clearAllNotes() {
+        notes.removeAll()
+        recentlyDeletedNote = nil
+        let freshNote = NoteItem(
+            title: LocalizationService.shared.language == .turkish ? "Hoş Geldiniz" : "Welcome",
+            body: LocalizationService.shared.language == .turkish ? "Tüm notlar başarıyla temizlendi. Yeni bir başlangıç için notlarınızı buraya yazmaya başlayabilirsiniz!" : "All notes have been cleared. Start writing your fresh notes here!",
+            color: .amber,
+            category: "General"
+        )
+        notes.append(freshNote)
+        selectedNoteId = freshNote.id
         saveNotes()
     }
 

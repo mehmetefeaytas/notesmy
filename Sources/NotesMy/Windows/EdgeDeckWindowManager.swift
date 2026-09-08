@@ -67,7 +67,7 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
                 AllNotesWindowManager.shared.show()
             },
             onOpenArchive: {
-                AllNotesWindowManager.shared.show()
+                AllNotesWindowManager.shared.show(filter: .archived)
             },
             onQuickCapture: { [weak self] in
                 if let note = ClipboardService.shared.captureToNewNote() {

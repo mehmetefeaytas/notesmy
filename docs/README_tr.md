@@ -1,86 +1,181 @@
 # 🇹🇷 NotesMy — macOS İçin Yapay Zeka Destekli İkinci Beyin & Akıllı Notlar
 
 <p align="center">
-  [🇬🇧 English](../README.md) · [🇹🇷 Türkçe](README_tr.md) · [🇩🇪 Deutsch](README_de.md) · [🇫🇷 Français](README_fr.md) · [🇪🇸 Español](README_es.md) · [🇧🇷 Português](README_pt.md) · [🇮🇹 Italiano](README_it.md) · [🇷🇺 Русский](README_ru.md) · [🇯🇵 日本語](README_ja.md) · [🇰🇷 한국어](README_ko.md) · [🇸🇦 العربية](README_ar.md) · [🇨🇳 中文](README_zh.md)
+  <img src="../assets/app_icon_1024.png" alt="NotesMy App Icon" width="128" height="128" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);" />
+</p>
+
+<h2 align="center">macOS İçin Ekran Kenarına Sabitlenen Sürtünmesiz Notlar ve İkinci Beyin</h2>
+
+<p align="center">
+  <a href="../README.md">🇬🇧 English</a> · 
+  <strong>[🇹🇷 Türkçe](README_tr.md)</strong> · 
+  <a href="README_de.md">🇩🇪 Deutsch</a> · 
+  <a href="README_fr.md">🇫🇷 Français</a> · 
+  <a href="README_es.md">🇪🇸 Español</a> · 
+  <a href="README_pt.md">🇧🇷 Português</a> · 
+  <a href="README_it.md">🇮🇹 Italiano</a> · 
+  <a href="README_ru.md">🇷🇺 Русский</a> · 
+  <a href="README_ja.md">🇯🇵 日本語</a> · 
+  <a href="README_ko.md">🇰🇷 한국어</a> · 
+  <a href="README_ar.md">🇸🇦 العربية</a> · 
+  <a href="README_zh.md">🇨🇳 中文</a>
 </p>
 
 <p align="center">
-  <img src="../assets/hero_banner.jpg" alt="NotesMy Hero Banner" width="100%" />
+  <a href="https://github.com/mehmetefeaytas/notesmy/releases"><img src="https://img.shields.io/github/v/release/mehmetefeaytas/notesmy?style=for-the-badge&color=8B5CF6" alt="Release" /></a>
+  <a href="https://github.com/mehmetefeaytas/homebrew-tap"><img src="https://img.shields.io/badge/Homebrew-Cask%20Mevcut-orange?style=for-the-badge&logo=homebrew" alt="Homebrew" /></a>
+  <img src="https://img.shields.io/badge/macOS-13.0%2B-blue?style=for-the-badge&logo=apple" alt="macOS 13+" />
+  <img src="https://img.shields.io/badge/Swift-6.0-F05138?style=for-the-badge&logo=swift" alt="Swift 6" />
+  <img src="https://img.shields.io/badge/Mimari-Universal%20(ARM64%20%2B%20x86__64)-green?style=for-the-badge" alt="Universal" />
+  <img src="https://img.shields.io/badge/Gizlilik-%25100%20Cihaz%20%C3%9Czerinde-success?style=for-the-badge" alt="Gizlilik" />
+  <img src="https://img.shields.io/badge/Lisans-Apache%202.0-yellow?style=for-the-badge" alt="Lisans" />
 </p>
 
-<p align="center">
-  <strong>Ekran Kenarına Sabitlenen Sürtünmesiz Notlar, Bilgi Grafiği, Çok Dilli Sesli Notlar & Çevrimdışı Yapay Zeka</strong>
-</p>
+---
+
+## 🎬 Sinematik Canlı Demo
 
 <p align="center">
-  <a href="https://github.com/mehmetefeaytas/notesmy/releases"><img src="https://img.shields.io/github/v/release/mehmetefeaytas/notesmy?style=flat-square&color=8B5CF6" alt="Release" /></a>
-  <img src="https://img.shields.io/badge/macOS-13.0%2B-blue?style=flat-square&logo=apple" alt="macOS 13+" />
-  <img src="https://img.shields.io/badge/Swift-6.0-F05138?style=flat-square&logo=swift" alt="Swift 6" />
-  <img src="https://img.shields.io/badge/Arch-Universal%20(ARM64%20%2B%20x86__64)-green?style=flat-square" alt="Universal" />
-  <img src="https://img.shields.io/badge/License-Apache%202.0-yellow?style=flat-square" alt="License" />
-  <img src="https://img.shields.io/badge/Privacy-100%25%20On--Device-success?style=flat-square" alt="Privacy" />
+  <img src="../assets/demo.gif" alt="NotesMy Canlı Demo" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.25);" />
 </p>
+<p align="center">
+  <em>NotesMy'ın ekran kenarından yumuşakça kayarak açılışı, hızlı not yakalama, pano yönetimi ve anlık OCR kullanımını gösteren ekran kaydı. (<a href="../assets/demo.mp4">60fps MP4 İndir</a>)</em>
+</p>
+
+---
+
+## ⚡ NotesMy Nedir?
+
+**NotesMy**, ekran kenarından anında açılan yapışkan notların (SideNotes, Unclutter) hızı ile modern kişisel bilgi yönetim sistemlerinin (Obsidian, Apple Intelligence) derinliğini bir araya getiren açık kaynaklı bir macOS uygulamasıdır.
+
+Tamamen yerel **Swift 6, SwiftUI ve AppKit** ile geliştirilen NotesMy, menü çubuğunuzda sessizce yer alır ve ekranın kenarına fareyle geldiğinizde veya kısayola bastığınızda sürtünmesizce kayarak açılır.
+
+### ✨ Öne Çıkan Yetenekler
+
+- 🪟 **Ekran Kenarı Çekmecesi:** Ekranın sağına/soluna yanaştığınızda yelpaze şeklinde açılan canlı not kartları.
+- 🗑️ **Hızlı Not Silme & Kullanılmayan Notları Temizleme:** Not kartı üzerinden tek tıkla hızlı silme; 30 günden uzun süredir dokunulmayan eski notları otomatik tespit edip toplu arşivleme/silme teklifi.
+- 🛡️ **Güvenli Pencere Yönetimi:** Ayarlar penceresi kapatıldığında uygulamanın kapanmaması güvencesi ve kazara veri kaybını önleyen 2 aşamalı onaylı not sıfırlama sistemi.
+- 🧠 **Yapay Zeka İkinci Beyin & Bağlantı Ağı:** Çift yönlü `[[WikiLinks]]` bağlantıları, notlarınızla sohbet edebilen yerel yapay zeka ve interaktif bilgi grafiği (Knowledge Graph).
+- 🔍 **Ekrandan Metin Yakalama (OCR):** Ekranın dilediğiniz bir bölgesini seçerek görüntüdeki yazıları Apple Vision ile anında kopyalama.
+- 🎙️ **Çok Dilli Sesli Notlar:** Apple Silicon NPU hızlandırmalı, 12 dilde anlık ses transkripti.
+- 📌 **Mantar Pano (Sticky Board):** Serbestçe sürüklenebilen ve yakınlaştırılabilen yapışkan not tuvali.
+- 🎨 **Minimalist Pastel Temalar:** Gözü yormayan 6 pastel ton, markdown biçimlendirme ve kod modu.
+- 🔒 **Sıfır Telemetri & %100 Çevrimdışı:** İnternet bağlantısı gerektirmez, tüm veriler Mac'inizde yerel olarak saklanır.
 
 ---
 
 ## 🍺 Homebrew ile Kurulum
 
+macOS üzerinde kurmanın ve güncel kalmanın en kolay yolu:
+
 ```bash
-# Tap the repository
+# 1. Depoyu ekleyin (Tap)
 brew tap mehmetefeaytas/tap
 
-# Install NotesMy
+# 2. NotesMy'ı yükleyin
 brew install --cask notesmy
 ```
 
-### Direct Download (.dmg)
-You can also download the precompiled **Universal DMG** directly from [GitHub Releases](https://github.com/mehmetefeaytas/notesmy/releases/latest).
+### Güncelleme
+```bash
+brew upgrade --cask notesmy
+```
+
+### Manuel DMG İndirme
+Doğrudan Universal DMG dosyasını indirmek isterseniz [GitHub Releases](https://github.com/mehmetefeaytas/notesmy/releases/latest) sayfasından en güncel sürümü edinebilirsiniz.
+
+> **İlk Açılış İpucu (Gatekeeper):** NotesMy bağımsız geliştirildiği için macOS ilk açılışta geliştirici uyarısı gösterebilir. Uygulamalar klasöründeki `NotesMy.app` simgesine sağ tıklayıp **Aç** diyebilir ya da Terminal'de şunu çalıştırabilirsiniz:
+> ```bash
+> xattr -cr /Applications/NotesMy.app
+> ```
 
 ---
 
-## ✨ Temel Özellikler
+## 📸 Gerçek Uygulama Arayüzü
 
 <table width="100%">
   <tr>
-    <td width="50%"><img src="../assets/feature_notes.jpg" alt="Notes" width="100%" /></td>
-    <td width="50%"><img src="../assets/feature_ai.jpg" alt="AI Second Brain" width="100%" /></td>
+    <td width="50%">
+      <h3 align="center">🗂️ Tüm Notlar & Anlamsal Arama</h3>
+      <img src="../assets/preview-allnotes.png" alt="Tüm Notlar Penceresi" width="100%" />
+    </td>
+    <td width="50%">
+      <h3 align="center">🪟 Ekran Kenarı Çekmecesi</h3>
+      <img src="../assets/preview-edge-deck.png" alt="Ekran Kenarı Çekmecesi" width="100%" />
+    </td>
   </tr>
   <tr>
-    <td width="50%"><img src="../assets/feature_voice.jpg" alt="Voice Transcription" width="100%" /></td>
-    <td width="50%"><img src="../assets/feature_board.jpg" alt="Sticky Board" width="100%" /></td>
+    <td width="50%">
+      <h3 align="center">📝 Minimalist Not Düzenleyici</h3>
+      <img src="../assets/preview-note.png" alt="Not Düzenleyici" width="100%" />
+    </td>
+    <td width="50%">
+      <h3 align="center">🎨 Modern Pastel İkon</h3>
+      <img src="../assets/app_icon_1024.png" alt="NotesMy İkonu" width="60%" style="display: block; margin: 0 auto;" />
+    </td>
   </tr>
 </table>
 
-- **🪟 Edge-Docked Deck (Unclutter & SideNotes Inspired):** Hover over the screen edge to reveal notes instantly.
-- **🧠 AI Second Brain & Knowledge Graph:** Interactive node graph visualizing bidirectional `[[WikiLinks]]` connections.
-- **🎙️ Multilingual Voice Notes:** Real-time speech transcription with 12 language support via `SFSpeechRecognizer`.
-- **📸 Screenshot Capture & Vision OCR:** Take interactive screen captures and extract text using Apple Vision.
-- **📅 Calendar Integration:** One-click `.ics` export with Apple Calendar, Google Calendar, and Outlook support.
-- **🔒 100% On-Device & Zero Telemetry:** No cloud accounts required, no trackers, strict local JSON storage.
+---
+
+## ⌨️ Temel Kısayollar
+
+Tüm kısayolları **Ayarlar → Kısayollar** sekmesinden kendi tercihinize göre kaydedebilirsiniz:
+
+| Kısayol | İşlem | Açıklama |
+| :--- | :--- | :--- |
+| `⌥⌘N` | **Yeni Not** | Ekranda anında bağımsız bir yapışkan not açar |
+| `⌥⌘V` | **Hızlı Yakalama** | Panodaki metni veya bağlantıyı anında nota dönüştürür |
+| `⌥⌘L` | **Tüm Notlar & Arama** | Ana arama ve yönetim konsolunu açar |
+| `⌥⌘B` | **Mantar Pano** | 2D serbest not tuvalini açar |
+| `⌥⌘A` | **Arşiv** | Arşivlenmiş notları listeler |
+| `⌃⌥⌘H` | **Çekmeceyi Göster/Gizle** | Kenar çekmecesini açıp kapatır |
+| `Esc` | **Notu Kapat** | Aktif düzenleyici penceresini kapatır |
 
 ---
 
-## ⌨️ Global Klavye Kısayolları
+## 📈 Star Geçmişi
 
-| Shortcut | Action |
-| :--- | :--- |
-| `⌥⌘N` | New Sticky Note |
-| `⌥⌘V` | Quick Capture from Clipboard |
-| `⌥⌘L` | All Notes & Semantic Search |
-| `⌥⌘B` | Open Sticky Board Canvas |
-| `⌥⌘A` | Open Archive |
-| `⌃⌥⌘H` | Toggle Edge Deck Visibility |
-| `⌘[` / `⌘]` | Navigate Previous / Next Note |
-| `Esc` | Close Active Note Window |
+[![Star History Chart](https://api.star-history.com/svg?repos=mehmetefeaytas/notesmy&type=Date)](https://star-history.com/#mehmetefeaytas/notesmy&Date)
 
 ---
 
-## 🤝 Katkıda Bulunma & Sürüm Politikası
+## 👥 Katkıda Bulunanlar
 
-Katkılar, hata bildirimleri ve özellik önerileri memnuniyetle karşılanır! Yeni sürüm yayınlama (Release) yetkisi yalnızca proje sahibine ([@mehmetefeaytas](https://github.com/mehmetefeaytas)) aittir. Ayrıntılı geliştirici kuralları için lütfen [CONTRIBUTING.md](../CONTRIBUTING.md) belgesini inceleyin.
+NotesMy topluluğuna katkı sağlayan herkese sonsuz teşekkürler!
+
+<a href="https://github.com/mehmetefeaytas/notesmy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=mehmetefeaytas/notesmy" alt="Katkıda Bulunanlar" />
+</a>
+
+Katkı kuralları ve test adımları için [CONTRIBUTING.md](../CONTRIBUTING.md) dosyasını inceleyebilirsiniz.
 
 ---
 
-## 📄 License
+## 💖 Sponsorluk ve Destek
 
-NotesMy is licensed under the **Apache License 2.0**.
+NotesMy günlük iş akışınızı hızlandırıyor ve hayatınızı kolaylaştırıyorsa projeye sponsor olabilir veya bir kahve ısmarlayabilirsiniz:
+
+<p align="center">
+  <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Destek%20Ol-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
+  &nbsp;&nbsp;
+  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Ba%C4%9F%C4%B1%C5%9F-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
+</p>
+
+---
+
+## 📬 İletişim & Bağlantı
+
+Geri bildirim, iş birliği ve sorularınız için:
+
+- 📧 **E-posta:** [efeyapiyor@gmail.com](mailto:efeyapiyor@gmail.com)
+- 💼 **LinkedIn:** [Mehmet Efe Aytaş](https://linkedin.com/in/mehmetefeaytas)
+- 🐙 **GitHub:** [@mehmetefeaytas](https://github.com/mehmetefeaytas)
+
+---
+
+## 📄 Lisans
+
+NotesMy, **Apache License 2.0** kapsamında lisanslanmıştır. Detaylar için [LICENSE](../LICENSE) dosyasına bakabilirsiniz.
+
+**[Mehmet Efe Aytaş](https://github.com/mehmetefeaytas)** tarafından ❤️ ile geliştirilmiştir.

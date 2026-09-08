@@ -32,12 +32,13 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.isFloatingPanel = true
-        panel.level = .floating
+        panel.isFloatingPanel = note.isPinned
+        panel.level = note.isPinned ? .floating : .normal
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isOpaque = false
         panel.backgroundColor = .clear
+        panel.alphaValue = CGFloat(max(0.25, min(1.0, note.opacity)))
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
         panel.delegate = self
@@ -45,13 +46,15 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
         panel.maxSize = NSSize(width: 900, height: 1200)
 
         let editorView = NoteEditorView(noteId: id, store: NoteStore.shared) { [weak self, weak panel] in
-            panel?.close()
-            self?.activePanels.removeValue(forKey: id)
+            DispatchQueue.main.async {
+                panel?.close()
+                self?.activePanels.removeValue(forKey: id)
+            }
         }
 
         panel.contentView = NSHostingView(rootView: editorView)
 
-        let screen = targetScreen ?? NSScreen.main ?? NSScreen.screens[0]
+        let screen = targetScreen ?? NSScreen.main ?? NSScreen.screens.first ?? NSScreen()
         let screenFrame = screen.visibleFrame
 
         var x: CGFloat = screenFrame.maxX - defaultWidth - 280
@@ -63,11 +66,15 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
             y = screenFrame.minY + 120
         }
 
-        // Restore saved pinned position if exists
-        if let px = note.pinnedX, let py = note.pinnedY {
-            x = CGFloat(px)
-            y = CGFloat(py)
+        // Restore saved window position if exists and within screen bounds
+        if let wx = note.windowX, let wy = note.windowY {
+            x = CGFloat(wx)
+            y = CGFloat(wy)
         }
+
+        // Guarantee window is always fully visible within screen margins (prevents bugging out on right edge or jumping to top-left)
+        x = max(screenFrame.minX + 20, min(x, screenFrame.maxX - defaultWidth - 20))
+        y = max(screenFrame.minY + 20, min(y, screenFrame.maxY - defaultHeight - 20))
 
         panel.setFrame(NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight), display: true)
 
@@ -76,10 +83,46 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    public func updatePin(id: UUID, isPinned: Bool) {
+        if let panel = activePanels[id] {
+            panel.isFloatingPanel = isPinned
+            panel.level = isPinned ? .floating : .normal
+            if isPinned {
+                panel.orderFront(nil)
+            }
+        }
+    }
+
+    public func updateOpacity(id: UUID, opacity: Double) {
+        if let panel = activePanels[id] {
+            panel.alphaValue = CGFloat(max(0.25, min(1.0, opacity)))
+        }
+    }
+
     public func closeNote(id: UUID) {
         if let panel = activePanels[id] {
-            panel.close()
-            activePanels.removeValue(forKey: id)
+            DispatchQueue.main.async {
+                panel.close()
+                self.activePanels.removeValue(forKey: id)
+            }
+        }
+    }
+
+    public func windowDidMove(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        for (id, panel) in activePanels where panel == window {
+            let frame = window.frame
+            if let screen = window.screen {
+                let sFrame = screen.visibleFrame
+                let safeX = max(sFrame.minX + 20, min(frame.minX, sFrame.maxX - frame.width - 20))
+                let safeY = max(sFrame.minY + 20, min(frame.minY, sFrame.maxY - frame.height - 20))
+                if var note = NoteStore.shared.notes.first(where: { $0.id == id }) {
+                    note.windowX = Double(safeX)
+                    note.windowY = Double(safeY)
+                    NoteStore.shared.updateNote(note)
+                }
+            }
+            break
         }
     }
 

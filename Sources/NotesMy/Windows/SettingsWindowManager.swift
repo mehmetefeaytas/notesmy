@@ -22,6 +22,7 @@ public final class SettingsWindowManager: NSObject, NSWindowDelegate {
         )
         win.title = "NotesMy — Settings"
         win.center()
+        win.isReleasedWhenClosed = false
         win.delegate = self
 
         let settingsView = ModernSettingsView()
@@ -30,6 +31,11 @@ public final class SettingsWindowManager: NSObject, NSWindowDelegate {
         self.window = win
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
     }
 
     public func windowWillClose(_ notification: Notification) {

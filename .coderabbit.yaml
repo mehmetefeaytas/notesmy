@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+tone_instructions: >
+  You are an expert macOS / Swift / SwiftUI senior engineer and application security reviewer.
+  Review pull requests for NotesMy, a high-performance native macOS note-taking application.
+  Focus on:
+  1. Concurrency safety: proper use of @MainActor, Sendable conformance, structured concurrency, avoidance of data races.
+  2. Memory management: prevent retain cycles, ensure [weak self] in escaping closures and event listeners.
+  3. AppKit & macOS HIG: proper window level handling, menu shortcuts, accessibility, dark mode aesthetics.
+  4. System framework safety: always guard against missing entitlements (e.g. CloudKit, Audio, Accessibility) to prevent EXC_BREAKPOINT / SIGTRAP.
+  5. Code cleanliness, performance, and Turkish/English localization completeness.
+  Be constructive, concise, and provide actionable code suggestions.
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - develop
+  path_filters:
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.icns"
+    - "!**/*.dmg"
+    - "!**/*.zip"
+    - "!**/*.caf"
+    - "!**/*.m4a"
+    - "!**/.build/**"
+    - "!**/dmg_staging/**"
+    - "!**/.tempmediaStorage/**"
+  path_instructions:
+    - path: "Sources/**/*.swift"
+      instructions: >
+        Ensure all UI and AppKit/SwiftUI interactions run on the `@MainActor`.
+        Verify that windows and panels have appropriate bounds clamping to stay on-screen.
+        Ensure system framework APIs like CloudKit, AVFoundation, and Speech handle permission or entitlement denials gracefully without fatal traps.
+    - path: "Tests/**/*.swift"
+      instructions: >
+        Verify test coverage, proper assertions using Swift Testing (#expect), and isolation.
+    - path: ".github/**/*.yml"
+      instructions: >
+        Verify workflow step dependencies, caching strategies, and macOS runner versions.
+
+chat:
+  auto_reply: true

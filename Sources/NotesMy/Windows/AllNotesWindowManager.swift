@@ -7,8 +7,10 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
 
     private var window: NSWindow?
 
-    public func show() {
+    public func show(filter: AllNotesWindowView.NoteFilter = .active) {
         if let win = window {
+            let allNotesView = AllNotesWindowView(initialFilter: filter)
+            win.contentView = NSHostingView(rootView: allNotesView)
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -23,15 +25,21 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
         win.title = "NotesMy — All Notes"
         win.titlebarAppearsTransparent = true
         win.center()
+        win.isReleasedWhenClosed = false
         win.setFrameAutosaveName("NotesMyAllNotesWindow")
         win.delegate = self
 
-        let allNotesView = AllNotesWindowView()
+        let allNotesView = AllNotesWindowView(initialFilter: filter)
         win.contentView = NSHostingView(rootView: allNotesView)
 
         self.window = win
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
     }
 
     public func windowWillClose(_ notification: Notification) {

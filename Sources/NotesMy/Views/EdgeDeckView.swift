@@ -12,6 +12,8 @@ public struct EdgeDeckView: View {
 
     @State private var hoveredCardId: UUID? = nil
     @State private var showClipboardDrawer: Bool = false
+    @State private var showNewCategoryAlert: Bool = false
+    @State private var newCategoryName: String = ""
 
     public init(
         store: NoteStore = .shared,
@@ -32,7 +34,10 @@ public struct EdgeDeckView: View {
     }
 
     private var displayedNotes: [NoteItem] {
-        store.activeNotes(for: store.selectedCategory)
+        if store.selectedCategory == "⭐" || store.selectedCategory == "Favorites" {
+            return store.favoriteNotes
+        }
+        return store.activeNotes(for: store.selectedCategory)
     }
 
     public var body: some View {
@@ -49,6 +54,17 @@ public struct EdgeDeckView: View {
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: store.isDeckHovered)
+        .alert(loc.language == .turkish ? "Yeni Kategori Ekle" : "Add New Category", isPresented: $showNewCategoryAlert) {
+            TextField(loc.language == .turkish ? "Kategori Adı" : "Category Name", text: $newCategoryName)
+            Button(loc.language == .turkish ? "Ekle" : "Add") {
+                let clean = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !clean.isEmpty {
+                    store.addCategory(clean)
+                    store.selectedCategory = clean
+                }
+            }
+            Button(loc.language == .turkish ? "İptal" : "Cancel", role: .cancel) {}
+        }
     }
 
     // MARK: - Resting State (14pt Pill)
@@ -83,6 +99,7 @@ public struct EdgeDeckView: View {
         .contentShape(Rectangle())
         .onHover { hovering in
             if hovering {
+                store.checkPasteboard()
                 withAnimation {
                     store.isDeckHovered = true
                 }
@@ -94,8 +111,26 @@ public struct EdgeDeckView: View {
 
     private var fannedDeckView: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            // Category Filter Bar (SideNotes feature)
-            categoryFilterBar
+            // Header with Dashboard & Category Filter Bar
+            HStack(spacing: 6) {
+                Button(action: onOpenAllNotes) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "macwindow.on.rectangle")
+                            .font(.system(size: 11, weight: .bold))
+                        Text(loc.language == .turkish ? "Ana Pencere" : "Dashboard")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor.opacity(0.18))
+                    .foregroundColor(Color.accentColor)
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Ana Pencereyi Aç (⌥⌘L)" : "Open All Notes Dashboard (⌥⌘L)")
+
+                categoryFilterBar
+            }
 
             // Clipboard History Drawer (Unclutter feature)
             if showClipboardDrawer {
@@ -122,7 +157,7 @@ public struct EdgeDeckView: View {
             .frame(maxHeight: 460)
 
             // Quick Control Bar
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Button(action: onNewNote) {
                     Label(loc.text(.newNote), systemImage: "plus")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -134,6 +169,21 @@ public struct EdgeDeckView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Create Note (⌥⌘N)")
+
+                // Screen OCR
+                Button(action: {
+                    Task {
+                        _ = await OCRService.shared.captureScreenAndExtractText()
+                    }
+                }) {
+                    Image(systemName: "text.viewfinder")
+                        .font(.system(size: 11))
+                        .padding(5)
+                        .background(Color.secondary.opacity(0.12))
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen Text (OCR)")
 
                 // Clipboard Drawer toggle
                 Button(action: {
@@ -209,11 +259,26 @@ public struct EdgeDeckView: View {
 
     private var categoryFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 categoryTab(key: "All")
+                categoryTab(key: "⭐")
                 ForEach(store.categories, id: \.self) { cat in
                     categoryTab(key: cat)
                 }
+                Button(action: {
+                    newCategoryName = ""
+                    showNewCategoryAlert = true
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.secondary.opacity(0.12))
+                        .foregroundColor(.primary)
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Yeni Kategori Ekle" : "Add Category")
             }
             .padding(4)
         }
@@ -226,7 +291,7 @@ public struct EdgeDeckView: View {
 
     private func categoryTab(key: String) -> some View {
         let isSelected = store.selectedCategory == key
-        let displayTitle = loc.localizedCategory(key)
+        let displayTitle = key == "⭐" ? "⭐" : loc.localizedCategory(key)
         return Button(action: {
             withAnimation(.easeInOut(duration: 0.15)) {
                 store.selectedCategory = key
@@ -314,6 +379,18 @@ public struct EdgeDeckView: View {
                             .font(.system(size: 12, weight: .semibold, design: note.isCodeMode ? .monospaced : .rounded))
                             .foregroundColor(note.color.textColor)
                             .lineLimit(1)
+
+                        if note.isFavorite {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 8))
+                                .foregroundColor(.yellow)
+                        }
+
+                        if note.isPinned {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 8))
+                                .foregroundColor(Color.accentColor)
+                        }
 
                         if note.isCodeMode {
                             Image(systemName: "chevron.left.forwardslash.chevron.right")

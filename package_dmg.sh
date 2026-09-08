@@ -2,7 +2,7 @@
 set -e
 
 APP_NAME="NotesMy"
-VERSION="1.6.1"
+VERSION="1.6.2"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 APP_BUNDLE="${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"
@@ -24,8 +24,13 @@ if [ -f "Resources/AppIcon.icns" ]; then
 fi
 echo -n "APPL????" > "${CONTENTS_DIR}/PkgInfo"
 
-echo "🔏 3. Ad-hoc code signing..."
-codesign --force --deep --sign - "${APP_BUNDLE}"
+if [ -n "${SIGNING_IDENTITY}" ]; then
+  echo "🔏 3. Developer ID code signing with ${SIGNING_IDENTITY}..."
+  codesign --force --deep --entitlements Resources/NotesMy.entitlements --sign "${SIGNING_IDENTITY}" "${APP_BUNDLE}"
+else
+  echo "🔏 3. Ad-hoc code signing..."
+  codesign --force --deep --sign - "${APP_BUNDLE}"
+fi
 
 echo "💿 4. Preparing DMG staging directory..."
 mkdir -p "${STAGING_DIR}"

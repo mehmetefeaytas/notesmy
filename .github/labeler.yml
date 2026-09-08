@@ -1,0 +1,30 @@
+"area: ui":
+  - changed-files:
+      - any-glob-to-any-file: "Sources/NotesMy/Views/**/*"
+
+"area: core":
+  - changed-files:
+      - any-glob-to-any-file: "Sources/NotesMy/Models/**/*"
+      - any-glob-to-any-file: "Sources/NotesMy/Services/**/*"
+
+"area: windows":
+  - changed-files:
+      - any-glob-to-any-file: "Sources/NotesMy/Windows/**/*"
+
+"area: packaging":
+  - changed-files:
+      - any-glob-to-any-file: "package_dmg.sh"
+      - any-glob-to-any-file: "Resources/**/*"
+
+"area: tests":
+  - changed-files:
+      - any-glob-to-any-file: "Tests/**/*"
+
+"area: docs":
+  - changed-files:
+      - any-glob-to-any-file: "*.md"
+      - any-glob-to-any-file: "docs/**/*"
+
+"area: ci":
+  - changed-files:
+      - any-glob-to-any-file: ".github/**/*"

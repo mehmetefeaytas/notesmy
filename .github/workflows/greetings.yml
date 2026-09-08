@@ -1,0 +1,25 @@
+name: 👋 First Interaction Greetings
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: >
+            👋 **Merhaba / Welcome!** 
+            NotesMy'a katkıda bulunmak için konu açtığınız için teşekkürler. Lütfen issue şablonunu doldurduğunuzdan emin olun. En kısa sürede inceleyeceğiz! ✨
+          pr-message: >
+            🎉 **Tebrikler ve teşekkürler! / Thank you for your contribution!**
+            İlk çekme isteğinizi (PR) gönderdiniz. Lütfen [CONTRIBUTING.md](CONTRIBUTING.md) kılavuzumuzu ve test gereksinimlerini kontrol edin. Otomatik CI testleri ve CodeRabbit incelemesi birazdan başlayacaktır! 🚀

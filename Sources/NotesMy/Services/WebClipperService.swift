@@ -9,11 +9,19 @@ public final class WebClipperService: @unchecked Sendable {
     @MainActor
     public func clipCurrentURLFromPasteboard() -> NoteItem? {
         guard let urlString = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: urlString),
-              url.scheme == "http" || url.scheme == "https" else {
+              let url = URL(string: urlString) else {
+            return nil
+        }
+        return clipURL(url)
+    }
+
+    @MainActor
+    public func clipURL(_ url: URL) -> NoteItem? {
+        guard url.scheme == "http" || url.scheme == "https" else {
             return nil
         }
 
+        let urlString = url.absoluteString
         let host = url.host ?? "Web"
         let title = "Web Clip: \(host)"
         let body = """

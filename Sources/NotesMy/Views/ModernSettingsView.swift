@@ -42,6 +42,10 @@ public struct ModernSettingsView: View {
     @State private var recordingAction: HotKeyAction? = nil
     @State private var keyMonitor: Any? = nil
 
+    // Data Management Alerts
+    @State private var showFirstClearAlert = false
+    @State private var showSecondClearAlert = false
+
     public init() {}
 
     public var body: some View {
@@ -73,6 +77,34 @@ public struct ModernSettingsView: View {
             }
         }
         .frame(minWidth: 680, minHeight: 480)
+        .alert(
+            loc.language == .turkish ? "Tüm Notları Silmek İstediğinize Emin Misiniz?" : "Are you sure you want to clear all notes?",
+            isPresented: $showFirstClearAlert
+        ) {
+            Button(loc.language == .turkish ? "İptal" : "Cancel", role: .cancel) {}
+            Button(loc.language == .turkish ? "Devam Et" : "Continue", role: .destructive) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    showSecondClearAlert = true
+                }
+            }
+        } message: {
+            Text(loc.language == .turkish
+                ? "Bu işlem mevcut tüm aktif ve arşivlenmiş notlarınızı ve yerel eklerini silecektir. Onaylamak için bir adım daha gerekiyor."
+                : "This action will delete all active and archived notes and attachments. A secondary confirmation is required.")
+        }
+        .alert(
+            loc.language == .turkish ? "⚠️ DİKKAT: Bu İşlem Geri Alınamaz!" : "⚠️ CAUTION: Cannot Be Undone!",
+            isPresented: $showSecondClearAlert
+        ) {
+            Button(loc.language == .turkish ? "Vazgeç" : "Cancel", role: .cancel) {}
+            Button(loc.language == .turkish ? "Evet, Tüm Notları Kalıcı Olarak Sil" : "Yes, Permanently Clear All Notes", role: .destructive) {
+                store.clearAllNotes()
+            }
+        } message: {
+            Text(loc.language == .turkish
+                ? "Tüm notlarınız tamamen silinecektir. Bu işlemi geri alamazsınız. Gerçekten sıfırlamak istiyor musunuz?"
+                : "All your notes and media attachments will be permanently deleted. Are you absolutely certain?")
+        }
         .onDisappear {
             stopRecording()
         }
@@ -507,6 +539,79 @@ public struct ModernSettingsView: View {
                         }
                         .buttonStyle(.bordered)
                     }
+                }
+                .padding(10)
+            }
+
+            // Inactive / Stale Notes Section
+            let staleNotes = store.inactiveNotes(olderThanDays: 30)
+            GroupBox(loc.language == .turkish ? "Kullanılmayan Eski Notlar (>30 Gün)" : "Inactive / Stale Notes (>30 Days)") {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.badge.exclamationmark.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.language == .turkish ? "30 günden uzun süredir güncellenmeyen notlar" : "Notes not updated for over 30 days")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(loc.language == .turkish
+                                 ? "\(staleNotes.count) adet uzun süredir dokunulmayan not tespit edildi."
+                                 : "Detected \(staleNotes.count) notes untouched for more than a month.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    if !staleNotes.isEmpty {
+                        HStack(spacing: 12) {
+                            Button(loc.language == .turkish ? "Eski Notları Arşivle (\(staleNotes.count))" : "Archive Stale Notes (\(staleNotes.count))") {
+                                store.archiveInactiveNotes(olderThanDays: 30)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(role: .destructive) {
+                                store.deleteInactiveNotes(olderThanDays: 30)
+                            } label: {
+                                Text(loc.language == .turkish ? "Eski Notları Kalıcı Sil (\(staleNotes.count))" : "Delete Stale Notes (\(staleNotes.count))")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding(.top, 4)
+                    }
+                }
+                .padding(10)
+            }
+
+            // Danger Zone: Clear All Notes
+            GroupBox(loc.language == .turkish ? "Sıfırlama & Temizlik" : "Reset & Maintenance") {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.red)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.language == .turkish ? "Tüm Notları Temizle" : "Clear All Notes")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.red)
+                            Text(loc.language == .turkish
+                                 ? "Tüm aktif ve arşivdeki notlarınızı, yerel çizim ve ses eklerini tamamen sıfırlar. İki aşamalı onay istenir."
+                                 : "Completely wipes all active and archived notes and their attachments. Two confirmation steps are required.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Button(role: .destructive) {
+                        showFirstClearAlert = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "trash.fill")
+                            Text(loc.language == .turkish ? "Tüm Notları Temizle..." : "Clear All Notes...")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                    .padding(.top, 4)
                 }
                 .padding(10)
             }

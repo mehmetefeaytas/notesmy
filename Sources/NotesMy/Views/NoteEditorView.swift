@@ -30,6 +30,8 @@ public struct NoteEditorView: View {
     @State private var showTemplatePicker: Bool = false
     @State private var showPencilDrawing: Bool = false
     @State private var showColorPickerPopover: Bool = false
+    @State private var showNewCategoryAlert: Bool = false
+    @State private var newCategoryName: String = ""
     @State private var aiStatusMessage: String? = nil
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
@@ -43,38 +45,75 @@ public struct NoteEditorView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            headerBar
+        ZStack {
+            VStack(spacing: 0) {
+                headerBar
 
-            if !isFolded {
-                if isRecordingVoice {
-                    voiceRecordingBanner
-                }
-
-                if !detectedDates.isEmpty {
-                    smartDateBanner
-                }
-
-                if let message = aiStatusMessage {
-                    aiBanner(message: message)
-                }
-
-                if let note = currentNote, !note.checklistItems.isEmpty {
-                    checklistPreviewStrip(items: note.checklistItems)
-                }
-
-                if let note = currentNote {
-                    let backlinks = store.getBacklinks(for: note.title)
-                    if !backlinks.isEmpty {
-                        backlinksPreviewStrip(links: backlinks)
+                if !isFolded {
+                    if isRecordingVoice {
+                        voiceRecordingBanner
                     }
+
+                    if !detectedDates.isEmpty {
+                        smartDateBanner
+                    }
+
+                    if let message = aiStatusMessage {
+                        aiBanner(message: message)
+                    }
+
+                    if let note = currentNote, !note.checklistItems.isEmpty {
+                        checklistPreviewStrip(items: note.checklistItems)
+                    }
+
+                    if let note = currentNote {
+                        let backlinks = store.getBacklinks(for: note.title)
+                        if !backlinks.isEmpty {
+                            backlinksPreviewStrip(links: backlinks)
+                        }
+                    }
+
+                    attachmentsGalleryStrip
+
+                    editorArea
+
+                    footerBar
                 }
+            }
+            .background(
+                localColor.primaryColor
+                    .opacity(opacity)
+            )
 
-                attachmentsGalleryStrip
-
-                editorArea
-
-                footerBar
+            // In-place drawing canvas overlay (completely eliminates sheet freezing on macOS NSPanel)
+            if showPencilDrawing {
+                PencilDrawingView(
+                    noteId: noteId,
+                    onSave: { url in
+                        let name = url.lastPathComponent
+                        let attachment = NoteAttachment(
+                            fileName: name,
+                            relativePath: name,
+                            mimeType: "image/png"
+                        )
+                        store.addAttachment(noteId: noteId, attachment: attachment)
+                        if localBody.isEmpty {
+                            localBody = "![\(name)](\(name))"
+                        } else {
+                            localBody += "\n\n![\(name)](\(name))\n"
+                        }
+                        persistChanges()
+                        showPencilDrawing = false
+                        aiStatusMessage = loc.language == .turkish ? "Çizim nota eklendi" : "Drawing saved to note"
+                    },
+                    onDismiss: {
+                        showPencilDrawing = false
+                    }
+                )
+                .background(Color(nsColor: .windowBackgroundColor))
+                .cornerRadius(12)
+                .transition(.opacity)
+                .zIndex(10)
             }
         }
         .frame(
@@ -82,10 +121,6 @@ public struct NoteEditorView: View {
             idealWidth: store.cardSize.dimensions.width,
             minHeight: isFolded ? 46 : 340,
             idealHeight: isFolded ? 46 : store.cardSize.dimensions.height
-        )
-        .background(
-            localColor.primaryColor
-                .opacity(opacity)
         )
         .cornerRadius(12)
         .overlay(
@@ -107,18 +142,20 @@ public struct NoteEditorView: View {
                 showTemplatePicker = false
             }
         }
-        .sheet(isPresented: $showPencilDrawing) {
-            PencilDrawingView(
-                noteId: noteId,
-                onSave: { url in
-                    let name = url.lastPathComponent
-                    localBody += "\n\n![\(name)](\(name))\n"
-                    showPencilDrawing = false
-                },
-                onDismiss: {
-                    showPencilDrawing = false
+        .popover(isPresented: $showOpacityPopover) {
+            opacityPopoverContent
+        }
+        .alert(loc.language == .turkish ? "Yeni Kategori Ekle" : "Add New Category", isPresented: $showNewCategoryAlert) {
+            TextField(loc.language == .turkish ? "Kategori Adı" : "Category Name", text: $newCategoryName)
+            Button(loc.language == .turkish ? "Ekle" : "Add") {
+                let clean = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !clean.isEmpty {
+                    store.addCategory(clean)
+                    localCategory = clean
+                    persistChanges()
                 }
-            )
+            }
+            Button(loc.language == .turkish ? "İptal" : "Cancel", role: .cancel) {}
         }
         .onAppear {
             loadNoteData()
@@ -190,6 +227,13 @@ public struct NoteEditorView: View {
                     Button(loc.localizedCategory(cat)) {
                         localCategory = cat
                     }
+                }
+                Divider()
+                Button(action: {
+                    newCategoryName = ""
+                    showNewCategoryAlert = true
+                }) {
+                    Label(loc.language == .turkish ? "+ Yeni Kategori..." : "+ New Category...", systemImage: "folder.badge.plus")
                 }
             } label: {
                 Text(loc.localizedCategory(localCategory))
@@ -449,32 +493,58 @@ public struct NoteEditorView: View {
 
     private var reminderPopoverContent: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(loc.text(.addReminder))
-                .font(.system(size: 12, weight: .bold))
+            HStack {
+                Text(loc.text(.addReminder))
+                    .font(.system(size: 12, weight: .bold))
+                Spacer()
+                if currentNote?.reminderDate != nil {
+                    Button(action: {
+                        store.setReminder(noteId: noteId, date: nil)
+                        showReminderPopover = false
+                    }) {
+                        Text(loc.language == .turkish ? "Temizle" : "Clear")
+                            .font(.system(size: 11))
+                            .foregroundColor(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // Quick presets
+            HStack(spacing: 6) {
+                Button(loc.language == .turkish ? "+1 Saat" : "+1 Hour") {
+                    reminderDate = Date().addingTimeInterval(3600)
+                }
+                .font(.system(size: 10))
+
+                Button(loc.language == .turkish ? "Yarın Sabah" : "Tomorrow 9AM") {
+                    var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date().addingTimeInterval(86400))
+                    comps.hour = 9
+                    comps.minute = 0
+                    if let d = Calendar.current.date(from: comps) {
+                        reminderDate = d
+                    }
+                }
+                .font(.system(size: 10))
+
+                Button(loc.language == .turkish ? "Gelecek Hafta" : "Next Week") {
+                    reminderDate = Date().addingTimeInterval(86400 * 7)
+                }
+                .font(.system(size: 10))
+            }
 
             DatePicker(
-                "Alert Date",
+                "",
                 selection: $reminderDate,
                 in: Date()...,
                 displayedComponents: [.date, .hourAndMinute]
             )
-            .datePickerStyle(.compact)
+            .datePickerStyle(.graphical)
             .labelsHidden()
 
             HStack {
-                if currentNote?.reminderDate != nil {
-                    Button("Remove") {
-                        store.setReminder(noteId: noteId, date: nil)
-                        showReminderPopover = false
-                    }
-                    .font(.system(size: 11))
-                    .foregroundColor(.red)
-                    .buttonStyle(.plain)
-                }
-
                 Spacer()
-
-                Button("Set Reminder") {
+                Button(loc.language == .turkish ? "Kaydet" : "Set Reminder") {
                     store.setReminder(noteId: noteId, date: reminderDate)
                     showReminderPopover = false
                 }
@@ -483,7 +553,51 @@ public struct NoteEditorView: View {
             }
         }
         .padding(12)
-        .frame(width: 220)
+        .frame(width: 270)
+    }
+
+    private var opacityPopoverContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(loc.language == .turkish ? "Pencere Saydamlığı" : "Window Transparency")
+                    .font(.system(size: 11, weight: .bold))
+                Spacer()
+                Text("\(Int(opacity * 100))%")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+
+            Slider(value: $opacity, in: 0.25...1.0)
+                .onChange(of: opacity) { newOpacity in
+                    NoteWindowManager.shared.updateOpacity(id: noteId, opacity: newOpacity)
+                    persistChanges()
+                }
+
+            HStack(spacing: 6) {
+                Button("50%") {
+                    opacity = 0.5
+                    NoteWindowManager.shared.updateOpacity(id: noteId, opacity: 0.5)
+                    persistChanges()
+                }
+                .font(.system(size: 10))
+
+                Button("75%") {
+                    opacity = 0.75
+                    NoteWindowManager.shared.updateOpacity(id: noteId, opacity: 0.75)
+                    persistChanges()
+                }
+                .font(.system(size: 10))
+
+                Button("100%") {
+                    opacity = 1.0
+                    NoteWindowManager.shared.updateOpacity(id: noteId, opacity: 1.0)
+                    persistChanges()
+                }
+                .font(.system(size: 10))
+            }
+        }
+        .padding(12)
+        .frame(width: 200)
     }
 
     // MARK: - Checklist Preview Strip
@@ -750,14 +864,27 @@ public struct NoteEditorView: View {
                 .buttonStyle(.plain)
                 .help(loc.text(.captureScreen))
 
-                // OCR
-                Button(action: extractOCRFromAttachmentsOrFile) {
+                // Paste Image from Clipboard
+                Button(action: {
+                    if !pasteImageFromClipboard() {
+                        aiStatusMessage = loc.language == .turkish ? "Panoda görsel bulunamadı" : "No image found on clipboard"
+                    }
+                }) {
+                    Image(systemName: "doc.on.clipboard")
+                        .font(.system(size: 11))
+                        .foregroundColor(localColor.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Panodaki Görseli Yapıştır" : "Paste Image from Clipboard")
+
+                // Screen OCR
+                Button(action: captureScreenOCR) {
                     Image(systemName: "text.viewfinder")
                         .font(.system(size: 11))
                         .foregroundColor(isPerformingOCR ? Color.accentColor : localColor.secondaryTextColor)
                 }
                 .buttonStyle(.plain)
-                .help(loc.text(.ocrExtract))
+                .help(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen Text (OCR)")
 
                 // Checklist
                 Button(action: insertChecklistItem) {
@@ -772,13 +899,13 @@ public struct NoteEditorView: View {
                 Button(action: { showReminderPopover.toggle() }) {
                     Image(systemName: currentNote?.reminderDate != nil ? "bell.fill" : "bell")
                         .font(.system(size: 11))
-                        .foregroundColor(currentNote?.reminderDate != nil ? .orange : localColor.secondaryTextColor)
+                        .foregroundColor(currentNote?.reminderDate != nil ? Color.orange : localColor.secondaryTextColor)
                 }
                 .buttonStyle(.plain)
+                .help("Set Reminder")
                 .popover(isPresented: $showReminderPopover) {
                     reminderPopoverContent
                 }
-                .help(loc.text(.addReminder))
 
                 // Apple Pencil
                 Button(action: { showPencilDrawing = true }) {
@@ -791,12 +918,22 @@ public struct NoteEditorView: View {
 
                 // More Menu (All extra features cleanly accessible)
                 Menu {
+                    Button(action: { AllNotesWindowManager.shared.show() }) {
+                        Label(loc.language == .turkish ? "Ana Pencereyi Aç (Tüm Notlar)" : "Open Main Dashboard (All Notes)", systemImage: "macwindow.on.rectangle")
+                    }
+
+                    Divider()
+
                     Button(action: { isCodeMode.toggle() }) {
                         Label(isCodeMode ? "Disable Code Mode" : "Enable Code Mode", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
 
                     Button(action: { showOpacityPopover.toggle() }) {
                         Label("Transparency (\(Int(opacity * 100))%)", systemImage: "circle.lefthalf.filled")
+                    }
+
+                    Button(action: extractOCRFromAttachmentsOrFile) {
+                        Label(loc.language == .turkish ? "Ek/Dosyadan Metin Çıkar (OCR)" : "Extract OCR from Attachments", systemImage: "doc.text.viewfinder")
                     }
 
                     Button(action: exportToCalendar) {
@@ -911,6 +1048,26 @@ public struct NoteEditorView: View {
 
     // MARK: - Media & Hardware Actions
 
+    private func captureScreenOCR() {
+        isPerformingOCR = true
+        Task {
+            aiStatusMessage = loc.language == .turkish ? "Ekrandan metin alanı seçin..." : "Select screen area with text..."
+            let text = await OCRService.shared.captureScreenAndExtractText()
+            isPerformingOCR = false
+            if !text.isEmpty {
+                if localBody.isEmpty {
+                    localBody = text
+                } else {
+                    localBody += "\n\n" + text
+                }
+                persistChanges()
+                aiStatusMessage = loc.language == .turkish ? "Metin ekrandan yakalandı & kopyalandı! ✨" : "Text captured & copied to clipboard! ✨"
+            } else {
+                aiStatusMessage = loc.language == .turkish ? "Metin bulunamadı veya iptal edildi" : "No text found or cancelled"
+            }
+        }
+    }
+
     private func captureScreenshot() {
         Task {
             if let screenshotURL = await ScreenshotService.shared.captureInteractiveScreenshot(noteId: noteId) {
@@ -984,20 +1141,70 @@ public struct NoteEditorView: View {
 
     private func toggleVoiceRecording() {
         if audioService.isRecording {
-            audioService.stopRecording()
+            let (savedURL, transcript) = audioService.stopRecording()
             isRecordingVoice = false
-            if !audioService.liveTranscript.isEmpty {
-                if localBody.isEmpty {
-                    localBody = audioService.liveTranscript
-                } else {
-                    localBody += "\n\n🎙️ \(audioService.liveTranscript)"
-                }
-                aiStatusMessage = "Voice transcription appended"
+
+            if let fileURL = savedURL {
+                let fileName = fileURL.lastPathComponent
+                let attachment = NoteAttachment(
+                    fileName: fileName,
+                    relativePath: fileName,
+                    mimeType: "audio/x-caf"
+                )
+                store.addAttachment(noteId: noteId, attachment: attachment)
             }
+
+            if !transcript.isEmpty {
+                if localBody.isEmpty {
+                    localBody = "🎙️ \(transcript)"
+                } else {
+                    localBody += "\n\n🎙️ \(transcript)\n"
+                }
+            }
+            persistChanges()
+            aiStatusMessage = loc.language == .turkish ? "Ses kaydı & transkript eklendi" : "Audio recording & transcript attached"
         } else {
-            isRecordingVoice = true
-            audioService.startRecording(language: loc.language) { _ in }
+            Task {
+                let granted = await audioService.requestPermissions()
+                guard granted else {
+                    aiStatusMessage = loc.language == .turkish ? "Mikrofon izni gerekli" : "Microphone permission required"
+                    return
+                }
+                isRecordingVoice = true
+                audioService.startRecording(language: loc.language) { _ in }
+            }
         }
+    }
+
+    @discardableResult
+    private func pasteImageFromClipboard() -> Bool {
+        let pb = NSPasteboard.general
+        if let image = NSImage(pasteboard: pb) {
+            if let tiffData = image.tiffRepresentation,
+               let bitmap = NSBitmapImageRep(data: tiffData),
+               let pngData = bitmap.representation(using: .png, properties: [:]) {
+                let fileName = "Pasted_\(Int(Date().timeIntervalSince1970)).png"
+                let targetURL = store.attachmentsDirectory.appendingPathComponent(fileName)
+                try? pngData.write(to: targetURL)
+
+                let attachment = NoteAttachment(
+                    fileName: fileName,
+                    relativePath: fileName,
+                    mimeType: "image/png"
+                )
+                store.addAttachment(noteId: noteId, attachment: attachment)
+
+                if localBody.isEmpty {
+                    localBody = "![\(fileName)](\(fileName))"
+                } else {
+                    localBody += "\n\n![\(fileName)](\(fileName))\n"
+                }
+                persistChanges()
+                aiStatusMessage = loc.language == .turkish ? "Görsel yapıştırıldı" : "Image pasted"
+                return true
+            }
+        }
+        return false
     }
 
     private func toggleFavorite() {
@@ -1068,12 +1275,15 @@ public struct NoteEditorView: View {
 
     private func togglePin() {
         isPinned.toggle()
+        NoteWindowManager.shared.updatePin(id: noteId, isPinned: isPinned)
         persistChanges()
     }
 
     private func archiveNote() {
         store.archiveNote(id: noteId)
-        onClose()
+        DispatchQueue.main.async {
+            self.onClose()
+        }
     }
 
     private func copyToClipboard() {
@@ -1119,7 +1329,13 @@ public struct NoteEditorView: View {
                 provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
                     if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
                         DispatchQueue.main.async {
-                            self.localBody += "\n![Attachment](\(url.lastPathComponent))\n"
+                            let fileName = "\(Int(Date().timeIntervalSince1970))_\(url.lastPathComponent)"
+                            let dest = self.store.attachmentsDirectory.appendingPathComponent(fileName)
+                            try? FileManager.default.copyItem(at: url, to: dest)
+                            let att = NoteAttachment(fileName: fileName, relativePath: fileName, mimeType: "image/png")
+                            self.store.addAttachment(noteId: self.noteId, attachment: att)
+                            self.localBody += "\n\n![\(fileName)](\(fileName))\n"
+                            self.persistChanges()
                         }
                     }
                 }

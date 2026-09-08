@@ -14,39 +14,39 @@ public final class AudioRecordingService: NSObject, ObservableObject {
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var audioEngine: AVAudioEngine?
+    private var audioFile: AVAudioFile?
+    private var currentRecordedURL: URL?
 
     public override init() {
         super.init()
     }
 
     public func requestPermissions() async -> Bool {
-        let audioPermission: Bool
-        if #available(macOS 14.0, *) {
-            audioPermission = await AVAudioApplication.requestRecordPermission()
-        } else {
-            audioPermission = true
-        }
+        let micGranted = await Self.requestMicrophoneAuth()
+        let speechGranted = await Self.requestSpeechAuth()
+        return micGranted && speechGranted
+    }
 
-        let speechStatus = await withCheckedContinuation { continuation in
+    nonisolated private static func requestMicrophoneAuth() async -> Bool {
+        if #available(macOS 14.0, *) {
+            return await AVAudioApplication.requestRecordPermission()
+        } else {
+            return true
+        }
+    }
+
+    nonisolated private static func requestSpeechAuth() async -> Bool {
+        await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status == .authorized)
             }
         }
-
-        return audioPermission && speechStatus
     }
 
-    public func startRecording(language: AppLanguage = .english, onTranscription: @escaping (String) -> Void) {
-        stopRecording()
+    @discardableResult
+    public func startRecording(language: AppLanguage = .english, onTranscription: @escaping @MainActor (String) -> Void) -> Bool {
+        _ = stopRecording()
 
-        // Verify speech recognition authorization
-        let authStatus = SFSpeechRecognizer.authorizationStatus()
-        guard authStatus == .authorized || authStatus == .notDetermined else {
-            print("Speech recognition not authorized (status: \(authStatus.rawValue))")
-            return
-        }
-
-        // Initialize recognizer with requested locale, with fallback to en-US
         let locale = Locale(identifier: language.speechLocale)
         var targetRecognizer = SFSpeechRecognizer(locale: locale)
 
@@ -55,11 +55,7 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             targetRecognizer = SFSpeechRecognizer(locale: fallbackLocale)
         }
 
-        guard let recognizer = targetRecognizer, recognizer.isAvailable else {
-            print("Speech recognizer unavailable for \(language.displayName)")
-            return
-        }
-        self.speechRecognizer = recognizer
+        self.speechRecognizer = targetRecognizer
 
         let engine = AVAudioEngine()
         self.audioEngine = engine
@@ -70,7 +66,26 @@ public final class AudioRecordingService: NSObject, ObservableObject {
 
         guard format.sampleRate > 0, format.channelCount > 0 else {
             print("Invalid audio input format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
-            return
+            return false
+        }
+
+        // Create audio output file in attachments directory
+        let fileName = "Voice_\(Int(Date().timeIntervalSince1970)).caf"
+        let outputURL = NoteStore.shared.attachmentsDirectory.appendingPathComponent(fileName)
+        self.currentRecordedURL = outputURL
+
+        var localFile: AVAudioFile?
+        do {
+            localFile = try AVAudioFile(
+                forWriting: outputURL,
+                settings: format.settings,
+                commonFormat: format.commonFormat,
+                interleaved: format.isInterleaved
+            )
+            self.audioFile = localFile
+        } catch {
+            print("Failed to initialize AVAudioFile: \(error)")
+            self.audioFile = nil
         }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -78,21 +93,27 @@ public final class AudioRecordingService: NSObject, ObservableObject {
         request.addsPunctuation = true
         self.recognitionRequest = request
 
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            Task { @MainActor [weak self] in
-                if let result = result {
-                    let text = result.bestTranscription.formattedString
-                    self?.liveTranscript = text
-                    onTranscription(text)
-                }
-                if error != nil || result?.isFinal == true {
-                    self?.stopRecording()
+        if let recognizer = speechRecognizer, recognizer.isAvailable {
+            recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    if let result = result {
+                        let text = result.bestTranscription.formattedString
+                        self.liveTranscript = text
+                        onTranscription(text)
+                    }
+                    if error != nil || result?.isFinal == true {
+                        _ = self.stopRecording()
+                    }
                 }
             }
         }
 
-        inputNode.installTap(onBus: bus, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
+        // Capture local references safely outside of actor isolation for real-time audio tap
+        let localRequest = request
+        inputNode.installTap(onBus: bus, bufferSize: 1024, format: format) { buffer, _ in
+            localRequest.append(buffer)
+            try? localFile?.write(from: buffer)
         }
 
         engine.prepare()
@@ -100,14 +121,18 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             try engine.start()
             isRecording = true
             liveTranscript = ""
+            return true
         } catch {
             print("Failed to start AVAudioEngine: \(error)")
-            stopRecording()
+            _ = stopRecording()
+            return false
         }
     }
 
-    public func stopRecording() {
-        guard isRecording || audioEngine != nil else { return }
+    @discardableResult
+    public func stopRecording() -> (audioURL: URL?, transcript: String) {
+        let finalURL = currentRecordedURL
+        let finalTranscript = liveTranscript
 
         if let engine = audioEngine {
             if engine.isRunning {
@@ -117,11 +142,16 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             audioEngine = nil
         }
 
+        audioFile = nil
+        currentRecordedURL = nil
+
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
 
         recognitionRequest = nil
         recognitionTask = nil
         isRecording = false
+
+        return (audioURL: finalURL, transcript: finalTranscript)
     }
 }

@@ -40,8 +40,11 @@ public struct StickyBoardView: View {
             // Draggable Note Cards on Canvas
             GeometryReader { geo in
                 ForEach(boardNotes) { note in
+                    let cardPos = positionFor(note: note, in: geo.size)
                     StickyCardView(
                         note: note,
+                        currentPosition: cardPos,
+                        zoomScale: zoomScale,
                         isSelected: selectedNoteId == note.id,
                         onSelect: {
                             selectedNoteId = note.id
@@ -58,8 +61,8 @@ public struct StickyBoardView: View {
                         }
                     )
                     .position(
-                        x: positionFor(note: note, in: geo.size).x + offset.width + dragCurrent.width,
-                        y: positionFor(note: note, in: geo.size).y + offset.height + dragCurrent.height
+                        x: cardPos.x + offset.width + dragCurrent.width,
+                        y: cardPos.y + offset.height + dragCurrent.height
                     )
                 }
             }
@@ -92,8 +95,14 @@ public struct StickyBoardView: View {
 
                     Spacer()
 
-                    // Controls: Zoom, Reset, Add Note
+                    // Controls: Zoom, Reset, Auto-Layout, Add Note
                     HStack(spacing: 6) {
+                        Button(action: autoArrangeGrid) {
+                            Image(systemName: "rectangle.3.group")
+                                .font(.system(size: 11))
+                        }
+                        .help(loc.language == .turkish ? "Kartları Düzenle (Otomatik Izgara)" : "Auto Arrange Cards")
+
                         Button(action: {
                             withAnimation(.spring()) {
                                 offset = .zero
@@ -201,6 +210,22 @@ public struct StickyBoardView: View {
         return CGPoint(x: initialX, y: initialY)
     }
 
+    private func autoArrangeGrid() {
+        withAnimation(.spring()) {
+            for (index, note) in boardNotes.enumerated() {
+                let col = index % 3
+                let row = index / 3
+                let newX = 160.0 + Double(col * 240)
+                let newY = 140.0 + Double(row * 220)
+                var updated = note
+                updated.pinnedX = newX
+                updated.pinnedY = newY
+                store.updateNote(updated)
+            }
+            store.saveNotes()
+        }
+    }
+
     private func addNewBoardNote() {
         let note = store.createNote(
             category: filterCategory == "All" ? "General" : filterCategory
@@ -213,6 +238,8 @@ public struct StickyBoardView: View {
 
 public struct StickyCardView: View {
     public var note: NoteItem
+    public var currentPosition: CGPoint
+    public var zoomScale: CGFloat
     public var isSelected: Bool
     public var onSelect: () -> Void
     public var onPositionChanged: (CGFloat, CGFloat) -> Void
@@ -308,16 +335,17 @@ public struct StickyCardView: View {
         .gesture(
             DragGesture()
                 .onChanged { val in
-                    dragOffset = val.translation
+                    dragOffset = CGSize(
+                        width: val.translation.width / zoomScale,
+                        height: val.translation.height / zoomScale
+                    )
                     onSelect()
                 }
                 .onEnded { val in
-                    let currentX = note.pinnedX ?? 200
-                    let currentY = note.pinnedY ?? 200
-                    let newX = currentX + Double(val.translation.width)
-                    let newY = currentY + Double(val.translation.height)
+                    let finalX = max(110, currentPosition.x + (val.translation.width / zoomScale))
+                    let finalY = max(100, currentPosition.y + (val.translation.height / zoomScale))
                     dragOffset = .zero
-                    onPositionChanged(CGFloat(newX), CGFloat(newY))
+                    onPositionChanged(finalX, finalY)
                 }
         )
     }

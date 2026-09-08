@@ -229,5 +229,70 @@ struct NotesMyTests {
         #expect(store.recentlyDeletedNote?.id == newNote.id)
         store.undoDelete()
         #expect(store.notes.contains(where: { $0.id == newNote.id }))
+
+        // Test Category Management
+        store.addCategory("Projects")
+        #expect(store.categories.contains("Projects"))
+        store.removeCategory("Projects")
+        #expect(!store.categories.contains("Projects"))
+
+        // Test Window Coordinates
+        var winNote = store.createNote(title: "Window Note", body: "Checking coords")
+        winNote.windowX = 450
+        winNote.windowY = 320
+        store.updateNote(winNote)
+        let retrieved = store.notes.first(where: { $0.id == winNote.id })
+        #expect(retrieved?.windowX == 450)
+        #expect(retrieved?.windowY == 320)
+    }
+
+    @MainActor
+    @Test("CloudKit safe initialization and entitlement check")
+    func testCloudKitSafeInitialization() {
+        let ck = CloudKitSyncService.shared
+        // In local test runner or unentitled environment, isEntitled is false and it must not crash
+        #expect(ck.syncStatusMessage == "Local Storage")
+        #expect(ck.isCloudKitAvailable == false)
+        #expect(ck.isSyncing == false)
+    }
+
+    @MainActor
+    @Test("WebClipperService URL clipping")
+    func testWebClipper() {
+        guard let url = URL(string: "https://apple.com/newsroom") else { return }
+        let note = WebClipperService.shared.clipURL(url)
+        #expect(note != nil)
+        #expect(note?.title.contains("apple.com") == true)
+        #expect(note?.body.contains("Source URL") == true)
+    }
+
+    @MainActor
+    @Test("AudioRecordingService initial safe state")
+    func testAudioRecordingSafeState() {
+        let audio = AudioRecordingService.shared
+        #expect(audio.isRecording == false)
+        #expect(audio.liveTranscript == "")
+    }
+
+    @MainActor
+    @Test("Inactive notes filtering and archiving")
+    func testInactiveNotesManagement() {
+        let store = NoteStore.shared
+        var oldNote = store.createNote(title: "Old Untouched Note", body: "35 days old")
+        // Manually age the note by 40 days
+        let fortyDaysAgo = Date().addingTimeInterval(-40 * 86400)
+        oldNote.updatedAt = fortyDaysAgo
+        store.updateNote(oldNote, touchUpdatedAt: false)
+
+        let inactive = store.inactiveNotes(olderThanDays: 30)
+        #expect(inactive.contains(where: { $0.id == oldNote.id }))
+
+        // Archive inactive notes
+        store.archiveInactiveNotes(olderThanDays: 30)
+        let archived = store.notes.first(where: { $0.id == oldNote.id })
+        #expect(archived?.isArchived == true)
+
+        // Cleanup
+        store.deleteNote(id: oldNote.id)
     }
 }

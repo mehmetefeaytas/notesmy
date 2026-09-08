@@ -34,6 +34,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
     public var isArchived: Bool
     public var pinnedX: Double?
     public var pinnedY: Double?
+    public var windowX: Double?
+    public var windowY: Double?
     public var tags: [String]
     public var attachments: [NoteAttachment]
 
@@ -58,6 +60,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         isArchived: Bool = false,
         pinnedX: Double? = nil,
         pinnedY: Double? = nil,
+        windowX: Double? = nil,
+        windowY: Double? = nil,
         tags: [String] = [],
         attachments: [NoteAttachment] = [],
         category: String = "General",
@@ -79,6 +83,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isArchived = isArchived
         self.pinnedX = pinnedX
         self.pinnedY = pinnedY
+        self.windowX = windowX
+        self.windowY = windowY
         self.tags = tags
         self.attachments = attachments
         self.category = category
@@ -89,6 +95,13 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.reminderDate = reminderDate
         self.versions = versions
         self.comments = comments
+    }
+
+    // Explicit Codable conformance for backwards compatibility
+    enum CodingKeys: String, CodingKey {
+        case id, title, body, color, createdAt, updatedAt, isPinned, isArchived
+        case pinnedX, pinnedY, windowX, windowY, tags, attachments, category
+        case isFolded, opacity, isCodeMode, isFavorite, reminderDate, versions, comments
     }
 
     public init(from decoder: Decoder) throws {
@@ -103,6 +116,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isArchived = try container.decodeIfPresent(Bool.self, forKey: .isArchived) ?? false
         self.pinnedX = try container.decodeIfPresent(Double.self, forKey: .pinnedX)
         self.pinnedY = try container.decodeIfPresent(Double.self, forKey: .pinnedY)
+        self.windowX = try container.decodeIfPresent(Double.self, forKey: .windowX)
+        self.windowY = try container.decodeIfPresent(Double.self, forKey: .windowY)
         self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         self.attachments = try container.decodeIfPresent([NoteAttachment].self, forKey: .attachments) ?? []
         self.category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"

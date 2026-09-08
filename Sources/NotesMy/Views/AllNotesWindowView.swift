@@ -6,12 +6,17 @@ public struct AllNotesWindowView: View {
     @ObservedObject var loc = LocalizationService.shared
 
     @State private var searchText: String = ""
-    @State private var selectedFilter: NoteFilter = .active
+    @State private var selectedFilter: NoteFilter
     @State private var selectedCategory: String = "All"
     @State private var selectedColorFilter: NoteColor? = nil
     @State private var selectedNoteId: UUID? = NoteStore.shared.activeNotes.first?.id
     @State private var viewMode: ViewMode = .list
     @State private var isSemanticSearchEnabled: Bool = false
+    @State private var showNewCategoryAlert: Bool = false
+    @State private var newCategoryName: String = ""
+    @State private var showWebClipAlert: Bool = false
+    @State private var webClipURLText: String = ""
+    @State private var showStaleBanner: Bool = true
 
     @ObservedObject var cloudKit = CloudKitSyncService.shared
 
@@ -46,7 +51,12 @@ public struct AllNotesWindowView: View {
         }
     }
 
-    public init() {}
+    public init(initialFilter: NoteFilter = .active) {
+        _selectedFilter = State(initialValue: initialFilter)
+        if initialFilter == .archived {
+            _selectedNoteId = State(initialValue: NoteStore.shared.archivedNotes.first?.id)
+        }
+    }
 
     private var filteredNotes: [NoteItem] {
         var baseNotes = store.notes
@@ -95,14 +105,31 @@ public struct AllNotesWindowView: View {
         }
         .frame(minWidth: 800, minHeight: 540)
         .onChange(of: selectedFilter) { _ in
-            if let id = selectedNoteId, !filteredNotes.contains(where: { $0.id == id }) {
-                selectedNoteId = filteredNotes.first?.id
-            }
+            ensureValidSelection()
         }
-        .onChange(of: filteredNotes) { newNotes in
-            if let id = selectedNoteId, !newNotes.contains(where: { $0.id == id }) {
-                selectedNoteId = newNotes.first?.id
+        .onChange(of: searchText) { _ in
+            ensureValidSelection()
+        }
+        .onChange(of: selectedCategory) { _ in
+            ensureValidSelection()
+        }
+        .alert(loc.language == .turkish ? "Yeni Kategori Ekle" : "Add New Category", isPresented: $showNewCategoryAlert) {
+            TextField(loc.language == .turkish ? "Kategori Adı" : "Category Name", text: $newCategoryName)
+            Button(loc.language == .turkish ? "Ekle" : "Add") {
+                let clean = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !clean.isEmpty {
+                    store.addCategory(clean)
+                    selectedCategory = clean
+                }
             }
+            Button(loc.language == .turkish ? "İptal" : "Cancel", role: .cancel) {}
+        }
+        .alert(loc.language == .turkish ? "Web Bağlantısı Kırp" : "Web Clip URL", isPresented: $showWebClipAlert) {
+            TextField("https://...", text: $webClipURLText)
+            Button(loc.language == .turkish ? "Kırp ve Ekle" : "Clip & Add") {
+                clipEnteredURL()
+            }
+            Button(loc.language == .turkish ? "İptal" : "Cancel", role: .cancel) {}
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
@@ -116,18 +143,51 @@ public struct AllNotesWindowView: View {
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
-                // Web Clipper
-                Button(action: clipWebURL) {
-                    Label("Web Clip", systemImage: "globe")
-                }
-                .help("Clip URL from Clipboard")
-
-                // iCloud Sync Button
+                // Screen Text OCR
                 Button(action: {
                     Task {
-                        await cloudKit.syncNotes()
+                        let text = await OCRService.shared.captureScreenAndExtractText()
+                        if !text.isEmpty {
+                            let note = store.createNote(
+                                title: String(text.prefix(30)),
+                                body: text,
+                                category: selectedCategory == "All" ? "General" : selectedCategory
+                            )
+                            selectedNoteId = note.id
+                            viewMode = .list
+                        }
                     }
                 }) {
+                    Label(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen OCR", systemImage: "text.viewfinder")
+                }
+                .help(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen OCR")
+
+                // Web Clipper
+                Button(action: handleWebClipButton) {
+                    Label("Web Clip", systemImage: "globe")
+                }
+                .help(loc.language == .turkish ? "Panodaki veya girilen URL'yi Kırp" : "Clip URL from Clipboard or Input")
+
+                // iCloud & Local Backup Menu
+                Menu {
+                    Section(header: Text(cloudKit.syncStatusMessage)) {
+                        Button(loc.language == .turkish ? "📁 Notlar Klasörünü Finder'da Aç" : "Show Notes in Finder") {
+                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: store.attachmentsDirectory.deletingLastPathComponent().path)
+                        }
+                        Button(loc.language == .turkish ? "💾 Manuel Yedek Dosyası Al (.txt)" : "Export All Notes (.txt)") {
+                            exportSingleDocument()
+                        }
+                        Button(loc.language == .turkish ? "📤 Markdown Olarak Dışa Aktar" : "Export as Markdown (.md)") {
+                            exportMarkdown()
+                        }
+                        Divider()
+                        Button(loc.language == .turkish ? "🔄 Senkronizasyonu Kontrol Et" : "Check iCloud Sync") {
+                            Task {
+                                await cloudKit.syncNotes()
+                            }
+                        }
+                    }
+                } label: {
                     Label(cloudKit.syncStatusMessage, systemImage: cloudKit.isSyncing ? "arrow.triangle.2.circlepath" : "icloud")
                 }
                 .help(cloudKit.syncStatusMessage)
@@ -227,15 +287,45 @@ public struct AllNotesWindowView: View {
                 .padding(.horizontal, 10)
             }
 
-            // Categories Filter (SideNotes inspired)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    categoryButton(title: "All")
-                    ForEach(store.categories, id: \.self) { cat in
-                        categoryButton(title: cat)
+            // Categories Filter Bar with Header & Add Button
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(loc.language == .turkish ? "Kategoriler" : "Categories")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+
+                    Spacer()
+
+                    Button(action: {
+                        newCategoryName = ""
+                        showNewCategoryAlert = true
+                    }) {
+                        HStack(spacing: 2) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(loc.language == .turkish ? "Ekle" : "Add")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundColor(.accentColor)
                     }
+                    .buttonStyle(.plain)
+                    .help(loc.language == .turkish ? "Yeni Kategori Ekle" : "Add Category")
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 12)
+
+                ScrollView(.horizontal, showsIndicators: true) {
+                    HStack(spacing: 5) {
+                        let totalCount = store.notes.filter { selectedFilter == .archived ? $0.isArchived : !$0.isArchived }.count
+                        categoryButton(title: "All", count: totalCount)
+                        ForEach(store.categories, id: \.self) { cat in
+                            let catCount = store.notes.filter { $0.category == cat && (selectedFilter == .archived ? $0.isArchived : !$0.isArchived) }.count
+                            categoryButton(title: cat, count: catCount)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                }
             }
 
             // Color Filter Pills
@@ -285,6 +375,45 @@ public struct AllNotesWindowView: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, 2)
+
+            // Inactive / Stale Notes cleanup banner (>30 days)
+            let staleCount = store.inactiveNotes(olderThanDays: 30).count
+            if staleCount > 0 && showStaleBanner {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 11))
+                    Text(loc.language == .turkish ? "\(staleCount) eski not (>30 gün)" : "\(staleCount) stale notes (>30d)")
+                        .font(.system(size: 10, weight: .medium))
+                        .lineLimit(1)
+                    Spacer()
+                    Button(loc.language == .turkish ? "Arşivle" : "Archive") {
+                        store.archiveInactiveNotes(olderThanDays: 30)
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+
+                    Button(loc.language == .turkish ? "Sil" : "Delete") {
+                        store.deleteInactiveNotes(olderThanDays: 30)
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+
+                    Button(action: { showStaleBanner = false }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.orange.opacity(0.12))
+                .cornerRadius(6)
+                .padding(.horizontal, 10)
+            }
 
             // Scrollable Notes List
             ScrollView(.vertical, showsIndicators: true) {
@@ -353,11 +482,25 @@ public struct AllNotesWindowView: View {
 
                         Spacer()
 
-                        if note.isFavorite {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 9))
-                                .foregroundColor(.yellow)
+                        Button(action: {
+                            store.toggleFavorite(noteId: note.id)
+                        }) {
+                            Image(systemName: note.isFavorite ? "star.fill" : "star")
+                                .font(.system(size: 10))
+                                .foregroundColor(note.isFavorite ? .yellow : (isSelected ? .white.opacity(0.6) : .secondary.opacity(0.4)))
                         }
+                        .buttonStyle(.plain)
+                        .help(note.isFavorite ? "Unfavorite" : "Favorite")
+
+                        Button(action: {
+                            store.deleteNote(id: note.id)
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 9))
+                                .foregroundColor(isSelected ? .white.opacity(0.6) : .secondary.opacity(0.4))
+                        }
+                        .buttonStyle(.plain)
+                        .help(loc.language == .turkish ? "Hızlı Sil" : "Quick Delete")
 
                         if note.isPinned {
                             Image(systemName: "pin.fill")
@@ -456,21 +599,44 @@ public struct AllNotesWindowView: View {
         }
     }
 
-    private func categoryButton(title: String) -> some View {
+    private func categoryButton(title: String, count: Int? = nil) -> some View {
         let isSelected = selectedCategory == title
         let displayTitle = loc.localizedCategory(title)
         return Button(action: {
             selectedCategory = title
         }) {
-            Text(displayTitle)
-                .font(.system(size: 11, weight: isSelected ? .bold : .regular))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
-                .foregroundColor(isSelected ? Color.accentColor : Color.secondary)
-                .cornerRadius(6)
+            HStack(spacing: 4) {
+                Text(displayTitle)
+                    .font(.system(size: 11, weight: isSelected ? .bold : .regular))
+                if let count = count {
+                    Text("\(count)")
+                        .font(.system(size: 9, weight: isSelected ? .bold : .medium))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.18))
+                        .foregroundColor(isSelected ? .white : .secondary)
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
+            .foregroundColor(isSelected ? Color.accentColor : Color.primary)
+            .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if title != "All" && title != "General" {
+                Button(role: .destructive) {
+                    store.removeCategory(title)
+                    if selectedCategory == title {
+                        selectedCategory = "All"
+                    }
+                } label: {
+                    Text(loc.language == .turkish ? "Kategoriyi Sil" : "Delete Category")
+                }
+            }
+        }
     }
 
     // MARK: - Detail Pane
@@ -479,7 +645,7 @@ public struct AllNotesWindowView: View {
         Group {
             if let noteId = selectedNoteId, store.notes.contains(where: { $0.id == noteId }) {
                 NoteEditorView(noteId: noteId, store: store) {
-                    selectedNoteId = nil
+                    selectedNoteId = filteredNotes.first(where: { $0.id != noteId })?.id
                 }
                 .padding(16)
             } else {
@@ -487,7 +653,7 @@ public struct AllNotesWindowView: View {
                     Image(systemName: "note.text")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text("Select a note to view or edit")
+                    Text(loc.language == .turkish ? "Görüntülemek veya düzenlemek için bir not seçin" : "Select a note to view or edit")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -519,10 +685,31 @@ public struct AllNotesWindowView: View {
         }
     }
 
-    private func clipWebURL() {
+    private func handleWebClipButton() {
         if let note = WebClipperService.shared.clipCurrentURLFromPasteboard() {
             selectedNoteId = note.id
             viewMode = .list
+        } else {
+            webClipURLText = ""
+            showWebClipAlert = true
+        }
+    }
+
+    private func clipEnteredURL() {
+        let clean = webClipURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: clean), clean.lowercased().hasPrefix("http") else { return }
+        if let note = WebClipperService.shared.clipURL(url) {
+            selectedNoteId = note.id
+            viewMode = .list
+        }
+    }
+
+    private func ensureValidSelection() {
+        let currentFiltered = filteredNotes
+        if let id = selectedNoteId, !currentFiltered.contains(where: { $0.id == id }) {
+            selectedNoteId = currentFiltered.first?.id
+        } else if selectedNoteId == nil {
+            selectedNoteId = currentFiltered.first?.id
         }
     }
 }
