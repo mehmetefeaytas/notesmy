@@ -35,7 +35,7 @@ jobs:
     if: github.repository_owner == 'mehmetefeaytas' && (github.actor == 'mehmetefeaytas' || github.event_name == 'push')
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
@@ -68,7 +68,7 @@ jobs:
     steps:
       # ── 1. Source ────────────────────────────────────────────
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0      # full history for changelog generation
 
