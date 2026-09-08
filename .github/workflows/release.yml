@@ -29,7 +29,7 @@ permissions:
 jobs:
   test:
     name: 🧪 Swift Tests
-    runs-on: macos-14         # Apple Silicon runner (M1), Xcode 15+
+    runs-on: macos-15         # Apple Silicon runner (M1), Xcode 15+
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -54,7 +54,7 @@ jobs:
 # ─────────────────────────────────────────────────────────────
   release:
     name: 📦 Build & Release
-    runs-on: macos-14
+    runs-on: macos-15
     needs: test
     timeout-minutes: 45
     outputs:
