@@ -1,6 +1,6 @@
 # NotesMy 📌
 
-> **Frictionless, edge-docked sticky notes, 2D sticky board canvas, and smart scratchpad for macOS.**  
+> **Smart notes with AI Second Brain, Knowledge Graph, iCloud Sync & Voice Transcription for macOS.**  
 > Powered natively by Swift 6, AppKit, SwiftUI, and **Apple Intelligence**. Zero clutter, zero subscriptions, zero tracking.
 
 [![macOS](https://img.shields.io/badge/macOS-13.0%2B-black?style=flat&logo=apple)](https://apple.com)
@@ -35,20 +35,35 @@ Or download the universal `.dmg` installer directly from the [Releases page](htt
 
 ---
 
-## 🌟 What's New in v1.4.0 🚀
+## 🌟 What's New in v1.5.0 — Second Brain & Knowledge Graph 🧠
 
-- 🇹🇷 **Multi-Language Support (English & Türkçe):** Seamless UI localization with on-the-fly switching in Settings.
-- 📌 **2D Freeform Sticky Board:** Interactive corkboard canvas with free draggable sticky cards, pushpins, and pan/zoom navigation (`⌥⌘B`).
-- 🎙️ **Voice Notes & Live Transcription:** On-device audio recording with instant speech-to-text powered by Apple `SFSpeechRecognizer` (Turkish & English).
-- 📸 **Direct Screenshot Capture:** Interactive screen selection (`/usr/sbin/screencapture -i`) that instantly attaches to your note.
-- 🔍 **On-Device Vision OCR:** Extract text from screenshots, photos, and receipts using the Apple `Vision` framework.
-- 🧠 **AI Messy Note Clean-Up & Smart Summaries:** One-click braindump structuring into organized paragraphs, bullet points, and actionable checklists.
-- ⚡ **Semantic Vector Search:** Deep conceptual and synonym search using Apple `NaturalLanguage` word embeddings (`NLEmbedding`).
-- 🔤 **Customizable Typography & Card Sizes:** Choose between 5 font styles (Rounded, Modern, Handwriting, Monospaced, Serif), adjust font size (11–22pt), and select card dimension presets.
-- 🔔 **Native macOS Reminders & Alerts:** Schedule local notification alerts directly from note dates.
-- ⚙️ **Modern Multi-Tab Settings:** Redesigned macOS Ventura/Sonoma/Sequoia settings window with live card typography preview.
+- 🕰️ **Version History:** Every note keeps a full snapshot timeline — restore any previous version with one click. Auto-snapshots before template apply or AI edits.
+- 📋 **Note Templates:** 5 built-in bilingual templates (Meeting Notes, Daily Planner, Code Review, Brainstorm, Bug Report). Apply in one tap from the editor header.
+- 🌐 **Knowledge Graph:** Visual 2D canvas auto-generated from `[[Note Title]]` wiki links. Drag nodes, zoom, and double-click to open any note directly (`⌥⌘G`).
+- 🤖 **AI Second Brain Chat:** Chat with your entire note collection. Semantic Q&A, daily plan generation, task extraction, and idea synthesis — all on-device.
+- ☁️ **iCloud CloudKit Sync:** Real-time sync across all your Apple devices using the CloudKit private database. Full offline support with background sync.
+- 🌍 **Web Clipper:** Copy any URL → click clip button → instant formatted note with title, source, and timestamp.
+- 📅 **Calendar Export:** Export note dates as `.ics` files — opens directly in Calendar.app (compatible with Google Calendar & Outlook).
+- ✏️ **Freehand Sketch Canvas:** Native AppKit drawing view in every note. Works with mouse, trackpad, and Apple Pencil via Sidecar. Saves as PNG attachment.
+- 🔗 **Wiki Links & Backlinks:** Write `[[Note Title]]` to create bidirectional links between notes. Backlinks strip shown at the bottom of the editor.
+- 💬 **Note Comments:** Timestamped comment threads per note. Full comment history preserved.
+
+### Previous: v1.4.0
+
+- 🇹🇷 **Multi-Language (EN / TR):** Full UI localization with on-the-fly language switching.
+- 📌 **2D Sticky Board Canvas:** Freeform corkboard with draggable sticky cards, pushpins, and pan/zoom (`⌥⌘B`).
+- 🎙️ **Voice Notes & Transcription:** On-device `SFSpeechRecognizer` with Turkish & English support.
+- 📸 **Screenshot Capture:** Interactive screen selection with instant note attachment.
+- 🔍 **Vision OCR:** Extract text from images using the Apple Vision framework.
+- 🧠 **AI Note Cleanup & Smart Summary:** One-click braindump structuring and summaries.
+- ⚡ **Semantic Search:** `NLEmbedding`-powered conceptual search.
+- 🔤 **Typography & Card Sizes:** 5 fonts, adjustable size slider, 3 card size presets.
+- 🔔 **Reminders:** Native `UNUserNotificationCenter` alerts.
+- ⚙️ **Modern Multi-Tab Settings:** Live typography preview panel.
 
 ---
+
+
 
 ## 🚀 The 3-Stage Edge Interaction
 
