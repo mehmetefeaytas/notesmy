@@ -1,5 +1,9 @@
-name: Release & Homebrew Cask
+name: 🚀 Build · Release · Homebrew
 
+# ─────────────────────────────────────────────────────────────
+# Trigger: v* tag push (e.g. git tag v1.6.0 && git push --tags)
+#          OR manual via GitHub UI (workflow_dispatch)
+# ─────────────────────────────────────────────────────────────
 on:
   push:
     tags:
@@ -7,114 +11,251 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag (e.g. v1.3.0)'
+        description: 'Version number (e.g. 1.6.0 — WITHOUT the v prefix)'
         required: true
-        default: 'v1.3.0'
+        default: '1.5.0'
+      release_notes:
+        description: 'Release notes (optional, leave blank for auto)'
+        required: false
+        default: ''
 
 permissions:
-  contents: write
+  contents: write   # create GitHub Releases, upload assets
+  actions: read
 
+# ─────────────────────────────────────────────────────────────
+# JOB 1 — Tests
+# ─────────────────────────────────────────────────────────────
 jobs:
-  build-and-release:
-    runs-on: macos-14
+  test:
+    name: 🧪 Swift Tests
+    runs-on: macos-14         # Apple Silicon runner (M1), Xcode 15+
+    timeout-minutes: 15
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Version
-        id: get_version
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Cache Swift Build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Run Tests
+        run: swift test --parallel 2>&1
+
+# ─────────────────────────────────────────────────────────────
+# JOB 2 — Build, Package, Release, Update Homebrew Tap
+# ─────────────────────────────────────────────────────────────
+  release:
+    name: 📦 Build & Release
+    runs-on: macos-14
+    needs: test
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag:     ${{ steps.meta.outputs.tag }}
+      sha256:  ${{ steps.checksum.outputs.sha256 }}
+      dmg:     ${{ steps.checksum.outputs.dmg }}
+
+    steps:
+      # ── 1. Source ────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # full history for changelog generation
+
+      # ── 2. Version metadata ──────────────────────────────────
+      - name: Extract version / tag
+        id: meta
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.version }}"
+            VER="${{ github.event.inputs.version }}"
+            TAG="v${VER}"
           else
             TAG="${GITHUB_REF#refs/tags/}"
+            VER="${TAG#v}"
           fi
-          VERSION="${TAG#v}"
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VER}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}"     >> $GITHUB_OUTPUT
+          echo "📌 Version: ${VER}  Tag: ${TAG}"
 
-      - name: Build Universal macOS Binary & Package DMG
+      # ── 3. Patch version in Info.plist ───────────────────────
+      - name: Patch Info.plist version
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          ./package_dmg.sh
+          VER="${{ steps.meta.outputs.version }}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VER}" Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VER}"            Resources/Info.plist
+          echo "✅ Info.plist patched to ${VER}"
 
-      - name: Compute SHA-256 Checksum
-        id: shasum
+      # ── 4. Patch package_dmg.sh version ─────────────────────
+      - name: Patch package_dmg.sh version
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          DMG_FILE="NotesMy-${VERSION}.dmg"
-          if [ ! -f "$DMG_FILE" ]; then
-            DMG_FILE="NotesMy-1.3.0.dmg"
+          VER="${{ steps.meta.outputs.version }}"
+          sed -i '' "s/^VERSION=.*/VERSION=\"${VER}\"/" package_dmg.sh
+          echo "✅ package_dmg.sh patched to ${VER}"
+
+      # ── 5. Select Xcode ──────────────────────────────────────
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      # ── 6. Restore SPM cache ─────────────────────────────────
+      - name: Cache Swift Build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-release-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      # ── 7. Build Universal Binary + Create DMG ───────────────
+      - name: Build & Package DMG
+        run: |
+          chmod +x package_dmg.sh
+          bash package_dmg.sh
+          echo "📦 Files created:"
+          ls -lh NotesMy*.dmg NotesMy.zip
+
+      # ── 8. Ad-hoc codesign (unsigned — users may see Gatekeeper prompt) ─
+      #       For production: replace with Developer ID signing + notarize
+      #       See SIGNING.md for full notarization setup.
+      - name: Verify code signature
+        run: |
+          codesign --verify --verbose NotesMy.app
+          spctl --assess --type execute NotesMy.app 2>&1 || true
+          echo "ℹ️  Ad-hoc signed (no Developer ID). See SIGNING.md for notarization."
+
+      # ── 9. SHA-256 checksum ──────────────────────────────────
+      - name: Compute SHA-256
+        id: checksum
+        run: |
+          VER="${{ steps.meta.outputs.version }}"
+          DMG="NotesMy-${VER}.dmg"
+          SHA=$(shasum -a 256 "${DMG}" | awk '{print $1}')
+          echo "sha256=${SHA}" >> $GITHUB_OUTPUT
+          echo "dmg=${DMG}"   >> $GITHUB_OUTPUT
+          echo "🔑 SHA256: ${SHA}"
+
+      # ── 10. Generate changelog from git log ──────────────────
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -n "$PREV" ]; then
+            LOG=$(git log ${PREV}..HEAD --pretty=format:"- %s (%h)" --no-merges | head -30)
+          else
+            LOG="Initial release"
           fi
-          SHA=$(shasum -a 256 "$DMG_FILE" | awk '{print $1}')
-          echo "sha=${SHA}" >> $GITHUB_OUTPUT
-          echo "dmg=${DMG_FILE}" >> $GITHUB_OUTPUT
-          echo "Calculated SHA256: ${SHA}"
+          # Escape for GitHub Actions multiline output
+          EOF=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          echo "log<<${EOF}" >> $GITHUB_OUTPUT
+          echo "${LOG}"      >> $GITHUB_OUTPUT
+          echo "${EOF}"      >> $GITHUB_OUTPUT
 
+      # ── 11. Create / update GitHub Release ───────────────────
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.get_version.outputs.tag }}
-          name: "NotesMy ${{ steps.get_version.outputs.tag }}"
+          tag_name:   ${{ steps.meta.outputs.tag }}
+          name:       "NotesMy ${{ steps.meta.outputs.tag }}"
+          draft:      false
+          prerelease: false
           files: |
-            ${{ steps.shasum.outputs.dmg }}
+            NotesMy-${{ steps.meta.outputs.version }}.dmg
             NotesMy.dmg
             NotesMy.zip
-          draft: false
-          prerelease: false
           body: |
-            ### NotesMy ${{ steps.get_version.outputs.tag }} 🚀
+            ## NotesMy ${{ steps.meta.outputs.tag }} 🚀
 
-            #### 📦 Installation via Homebrew:
+            ${{ github.event.inputs.release_notes != '' && github.event.inputs.release_notes || steps.changelog.outputs.log }}
+
+            ---
+
+            ### ⚡ Install via Homebrew (recommended)
             ```bash
             brew install --cask mehmetefeaytas/tap/notesmy
             ```
 
-            #### 🔑 SHA-256 Checksum:
-            `${{ steps.shasum.outputs.sha }}`
+            ### 📥 Direct Download
+            Download **NotesMy-${{ steps.meta.outputs.version }}.dmg** below, open it, drag NotesMy.app → Applications.
 
-      - name: Update Homebrew Tap Formula
+            > ⚠️ **Gatekeeper note:** This build is ad-hoc signed (no Apple notarization yet).  
+            > If macOS blocks it: **right-click → Open → Open** once to allow permanently.
+
+            ### 🔑 SHA-256
+            ```
+            ${{ steps.checksum.outputs.sha256 }}
+            ```
+
+            ### Upgrade
+            ```bash
+            brew upgrade --cask notesmy
+            ```
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 3 — Update Homebrew Tap (separate job = clean env)
+  # ─────────────────────────────────────────────────────────────
+  update-tap:
+    name: 🍺 Update Homebrew Tap
+    runs-on: ubuntu-latest    # linux is faster + cheaper for git ops
+    needs: release
+    timeout-minutes: 10
+
+    steps:
+      - name: Update Casks/notesmy.rb in homebrew-tap
         env:
-          TAP_PAT: ${{ secrets.TAP_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.get_version.outputs.version }}
-          SHA: ${{ steps.shasum.outputs.sha }}
+          # Create a PAT at: Settings → Developer settings → Personal access tokens → Fine-grained
+          # Grant it: Contents (read+write) on the homebrew-tap repo.
+          # Store as repository secret: TAP_GITHUB_TOKEN
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          VERSION:   ${{ needs.release.outputs.version }}
+          SHA256:    ${{ needs.release.outputs.sha256 }}
         run: |
-          echo "Updating mehmetefeaytas/homebrew-tap..."
-          git config --global user.name "github-actions[bot]"
+          # ── Clone tap ─────────────────────────────────────────
+          git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Clone tap repository
-          git clone https://x-access-token:${TAP_PAT}@github.com/mehmetefeaytas/homebrew-tap.git tap-repo || exit 0
+
+          git clone \
+            "https://x-access-token:${TAP_TOKEN}@github.com/mehmetefeaytas/homebrew-tap.git" \
+            tap-repo
+
           cd tap-repo
           mkdir -p Casks
-          
-          cat << 'EOF' > Casks/notesmy.rb
-          cask "notesmy" do
-            version "VERSION_PLACEHOLDER"
-            sha256 "SHA_PLACEHOLDER"
 
-            url "https://github.com/mehmetefeaytas/notesmy/releases/download/v#{version}/NotesMy-#{version}.dmg"
-            name "NotesMy"
-            desc "Frictionless, edge-docked sticky notes and smart scratchpad for macOS"
-            homepage "https://github.com/mehmetefeaytas/notesmy"
+          # ── Write cask file ───────────────────────────────────
+          cat > Casks/notesmy.rb << CASK_EOF
+cask "notesmy" do
+  version "${VERSION}"
+  sha256 "${SHA256}"
 
-            auto_updates true
-            depends_on macos: :ventura
+  url "https://github.com/mehmetefeaytas/notesmy/releases/download/v#{version}/NotesMy-#{version}.dmg"
+  name "NotesMy"
+  desc "Smart notes with AI Second Brain, Knowledge Graph, iCloud Sync & Voice Transcription for macOS"
+  homepage "https://github.com/mehmetefeaytas/notesmy"
 
-            app "NotesMy.app"
+  auto_updates true
+  depends_on macos: :ventura   # macOS 13.0+
 
-            uninstall quit: "app.notesmy.mac"
+  app "NotesMy.app"
 
-            zap trash: [
-              "~/Library/Application Support/NotesMy",
-              "~/Library/Preferences/app.notesmy.mac.plist",
-            ]
-          end
-          EOF
-          
-          sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/g" Casks/notesmy.rb
-          sed -i '' "s/SHA_PLACEHOLDER/${SHA}/g" Casks/notesmy.rb
-          
+  uninstall quit: "app.notesmy.mac"
+
+  zap trash: [
+    "~/Library/Application Support/NotesMy",
+    "~/Library/Preferences/app.notesmy.mac.plist",
+    "~/Library/Caches/app.notesmy.mac",
+  ]
+end
+CASK_EOF
+
+          # ── Commit & push ──────────────────────────────────────
           git add Casks/notesmy.rb
-          git commit -m "chore: bump notesmy to v${VERSION}" || exit 0
-          git push origin main || exit 0
+          git diff --cached --quiet && echo "No changes — cask already up to date." && exit 0
+          git commit -m "chore: bump notesmy to v${VERSION}"
+          git push origin main
+          echo "✅ homebrew-tap updated to v${VERSION}"

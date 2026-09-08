@@ -1,0 +1,47 @@
+name: 🧪 CI — Build & Test
+
+# Run on every push to main/dev branches and all pull requests
+on:
+  push:
+    branches: [ main, develop, 'feature/**', 'fix/**' ]
+    tags-ignore: [ 'v*' ]   # tags are handled by release.yml
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    name: Build & Test (macOS 14)
+    runs-on: macos-14
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-ci-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Build (debug)
+        run: swift build 2>&1
+
+      - name: Run tests
+        run: swift test --parallel 2>&1
+
+      - name: Build release binary (smoke-check)
+        run: swift build -c release --arch arm64 2>&1
+
+      - name: Check binary exists
+        run: |
+          ls -lh .build/release/NotesMy || ls -lh .build/arm64-apple-macosx/release/NotesMy
+          echo "✅ Release binary found"
