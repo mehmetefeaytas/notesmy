@@ -258,5 +258,5 @@ jobs:
           git add Casks/notesmy.rb
           git diff --cached --quiet && echo "No changes — cask already up to date." && exit 0
           git commit -m "chore: bump notesmy to v${VERSION}"
-          git push origin main
+          git push "https://x-access-token:${TAP_TOKEN}@github.com/mehmetefeaytas/homebrew-tap.git" main
           echo "✅ homebrew-tap updated to v${VERSION}"
