@@ -98,22 +98,8 @@ Se desideri scaricare direttamente l'immagine disco Universal, visita la pagina 
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Tutte le Note & Ricerca Semantica</h3>
-      <img src="../assets/preview-allnotes.png" alt="Finestra principale di NotesMy" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Cassetto Laterale di Bordo</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Editor di Note Minimalista</h3>
-      <img src="../assets/preview-note.png" alt="Editor note" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Icona Moderna Pastello</h3>
-      <img src="../assets/app_icon_1024.png" alt="Icona NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ Grafo della Conoscenza IA & Connessioni Luminose</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Grafo della Conoscenza" width="100%" />
     </td>
   </tr>
 </table>

@@ -98,22 +98,8 @@ brew upgrade --cask notesmy
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Все заметки и семантический поиск</h3>
-      <img src="../assets/preview-allnotes.png" alt="Окно Все заметки NotesMy" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Выдвижная панель у края экрана</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Минималистичный редактор</h3>
-      <img src="../assets/preview-note.png" alt="Редактор заметок" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Современная пастельная иконка</h3>
-      <img src="../assets/app_icon_1024.png" alt="Иконка NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ Граф знаний ИИ и светящиеся связи</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Граф знаний" width="100%" />
     </td>
   </tr>
 </table>

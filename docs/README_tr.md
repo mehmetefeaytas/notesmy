@@ -98,22 +98,8 @@ Doğrudan Universal DMG dosyasını indirmek isterseniz [GitHub Releases](https:
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Tüm Notlar & Anlamsal Arama</h3>
-      <img src="../assets/preview-allnotes.png" alt="Tüm Notlar Penceresi" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Ekran Kenarı Çekmecesi</h3>
-      <img src="../assets/preview-edge-deck.png" alt="Ekran Kenarı Çekmecesi" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Minimalist Not Düzenleyici</h3>
-      <img src="../assets/preview-note.png" alt="Not Düzenleyici" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Modern Pastel İkon</h3>
-      <img src="../assets/app_icon_1024.png" alt="NotesMy İkonu" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ AI Bağlantı Ağı & Renkli Bağlar</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Bağlantı Ağı" width="100%" />
     </td>
   </tr>
 </table>

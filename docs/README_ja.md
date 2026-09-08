@@ -98,22 +98,8 @@ Universal DMGファイルを直接ダウンロードしたい場合は、[GitHub
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ 全ノート一覧＆セマンティック検索</h3>
-      <img src="../assets/preview-allnotes.png" alt="NotesMy 全ノート一覧" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 画面端スライド式エッジドック</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 ミニマルなノートエディタ</h3>
-      <img src="../assets/preview-note.png" alt="NotesMy エディタ" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 パステル調アプリアイコン</h3>
-      <img src="../assets/app_icon_1024.png" alt="NotesMy アイコン" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ AIナレッジグラフ＆発光リンク</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy ナレッジグラフ" width="100%" />
     </td>
   </tr>
 </table>

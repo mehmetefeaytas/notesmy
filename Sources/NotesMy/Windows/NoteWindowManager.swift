@@ -54,27 +54,31 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
 
         panel.contentView = NSHostingView(rootView: editorView)
 
-        let screen = targetScreen ?? NSScreen.main ?? NSScreen.screens.first ?? NSScreen()
+        let defaultScreen = NSScreen.screens.first(where: { $0.localizedName.contains("DELL") }) ?? NSScreen.main ?? NSScreen.screens.first ?? NSScreen()
+        let screen = targetScreen ?? defaultScreen
         let screenFrame = screen.visibleFrame
 
-        var x: CGFloat = screenFrame.maxX - defaultWidth - 280
+        var x: CGFloat = screenFrame.maxX - defaultWidth - 320
         var y: CGFloat = screenFrame.midY - (defaultHeight / 2)
 
         if NoteStore.shared.dockSide == .left {
-            x = screenFrame.minX + 280
+            x = screenFrame.minX + 320
         } else if NoteStore.shared.dockSide == .bottom {
-            y = screenFrame.minY + 120
+            y = screenFrame.minY + 140
         }
 
-        // Restore saved window position if exists and within screen bounds
+        // Restore saved window position if exists and within target screen bounds
         if let wx = note.windowX, let wy = note.windowY {
-            x = CGFloat(wx)
-            y = CGFloat(wy)
+            let pt = NSPoint(x: CGFloat(wx), y: CGFloat(wy))
+            if screenFrame.contains(pt) {
+                x = CGFloat(wx)
+                y = CGFloat(wy)
+            }
         }
 
         // Guarantee window is always fully visible within screen margins (prevents bugging out on right edge or jumping to top-left)
-        x = max(screenFrame.minX + 20, min(x, screenFrame.maxX - defaultWidth - 20))
-        y = max(screenFrame.minY + 20, min(y, screenFrame.maxY - defaultHeight - 20))
+        x = max(screenFrame.minX + 40, min(x, screenFrame.maxX - defaultWidth - 40))
+        y = max(screenFrame.minY + 40, min(y, screenFrame.maxY - defaultHeight - 40))
 
         panel.setFrame(NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight), display: true)
 

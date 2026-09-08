@@ -605,6 +605,14 @@ public struct KnowledgeGraphView: View {
             if nodePositions.isEmpty {
                 applyForceDirectedLayout()
             }
+            if selectedNodeId == nil {
+                let (nodes, edges) = graphData
+                if let firstConnectedEdge = edges.first {
+                    selectedNodeId = firstConnectedEdge.sourceId
+                } else {
+                    selectedNodeId = nodes.first?.id
+                }
+            }
         }
     }
 

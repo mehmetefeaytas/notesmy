@@ -98,22 +98,8 @@ brew upgrade --cask notesmy
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ جميع الملاحظات والبحث الدلالي</h3>
-      <img src="../assets/preview-allnotes.png" alt="نافذة جميع الملاحظات" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 درج حافة الشاشة الجانبي</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 محرر الملاحظات البسيط</h3>
-      <img src="../assets/preview-note.png" alt="محرر الملاحظات" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 أيقونة عصرية بألوان باستيل</h3>
-      <img src="../assets/app_icon_1024.png" alt="أيقونة NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ رسم بياني للمعرفة بالذكاء الاصطناعي وروابط مضيئة</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy رسم بياني للمعرفة" width="100%" />
     </td>
   </tr>
 </table>

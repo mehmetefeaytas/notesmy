@@ -112,8 +112,8 @@ Prefer a direct DMG download? Grab the latest Universal binary from [GitHub Rele
       <img src="assets/preview-note.png" alt="NotesMy Note Editor" width="100%" />
     </td>
     <td width="50%">
-      <h3 align="center">🎨 Modern Pastel Customization</h3>
-      <img src="assets/app_icon_1024.png" alt="NotesMy App Icon" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ AI Knowledge Graph & Glowing Bonds</h3>
+      <img src="assets/preview-graph.png" alt="NotesMy Knowledge Graph" width="100%" />
     </td>
   </tr>
 </table>

@@ -98,22 +98,8 @@ Prefere instalar via DMG? Obtenha o instalador Universal mais recente na página
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Todas as Notas e Busca Semântica</h3>
-      <img src="../assets/preview-allnotes.png" alt="Janela de todas as notas" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Gaveta Lateral de Borda</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Editor Minimalista</h3>
-      <img src="../assets/preview-note.png" alt="Editor de notas" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Ícone Moderno Pastel</h3>
-      <img src="../assets/app_icon_1024.png" alt="Ícone NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ Grafo de Conhecimento IA & Vínculos Brilhantes</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Grafo de Conhecimento" width="100%" />
     </td>
   </tr>
 </table>

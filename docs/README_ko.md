@@ -98,22 +98,8 @@ Universal DMG 파일을 직접 다운로드하려면 [GitHub Releases](https://g
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ 모든 메모 & 시맨틱 검색</h3>
-      <img src="../assets/preview-allnotes.png" alt="NotesMy 모든 메모 창" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 화면 모서리 슬라이딩 덱</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 미니멀 메모 편집기</h3>
-      <img src="../assets/preview-note.png" alt="메모 편집기" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 파스텔 앱 아이콘</h3>
-      <img src="../assets/app_icon_1024.png" alt="NotesMy 아이콘" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ AI 지식 그래프 & 발광 연결선</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy 지식 그래프" width="100%" />
     </td>
   </tr>
 </table>

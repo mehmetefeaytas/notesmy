@@ -84,7 +84,8 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
         panel.contentView = hostingView
 
         self.deckPanel = panel
-        self.activeScreen = NSScreen.main
+        let defaultScreen = NSScreen.screens.first(where: { $0.localizedName.contains("DELL") }) ?? NSScreen.main
+        self.activeScreen = defaultScreen
         updatePanelFrame(isExpanded: false)
         panel.orderFront(nil)
     }

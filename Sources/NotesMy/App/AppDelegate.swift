@@ -53,6 +53,53 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 await UpdateService.shared.checkForUpdates(isUserInitiated: false)
             }
         }
+
+        // External Automation / Control Listener
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.notesmy.command"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let action = notification.object as? String ?? (notification.userInfo?["action"] as? String) else { return }
+            Task { @MainActor [weak self] in
+                self?.handleExternalCommand(action)
+            }
+        }
+    }
+
+    private func handleExternalCommand(_ command: String) {
+        switch command {
+        case "show:list":
+            AllNotesWindowManager.shared.show(filter: .active, viewMode: .list)
+        case "show:board":
+            AllNotesWindowManager.shared.show(filter: .active, viewMode: .board)
+        case "show:graph":
+            AllNotesWindowManager.shared.show(filter: .active, viewMode: .graph)
+        case "open:first":
+            if let note = NoteStore.shared.activeNotes.first {
+                NoteWindowManager.shared.openNote(id: note.id)
+            }
+        case "open:second":
+            let active = NoteStore.shared.activeNotes
+            if active.count > 1 {
+                NoteWindowManager.shared.openNote(id: active[1].id)
+            }
+        case "deck:expand":
+            NoteStore.shared.isDeckHovered = true
+            EdgeDeckWindowManager.shared.updatePanelFrame(isExpanded: true)
+        case "deck:collapse":
+            NoteStore.shared.isDeckHovered = false
+            EdgeDeckWindowManager.shared.updatePanelFrame(isExpanded: false)
+        case "close:all":
+            for note in NoteStore.shared.notes {
+                NoteWindowManager.shared.closeNote(id: note.id)
+            }
+            for win in NSApp.windows where win.title.contains("NotesMy") {
+                win.orderOut(nil)
+            }
+        default:
+            break
+        }
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

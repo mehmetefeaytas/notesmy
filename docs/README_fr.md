@@ -98,22 +98,8 @@ Vous préférez télécharger directement le fichier DMG Universel ? Obtenez la 
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Toutes les Notes & Recherche Sémantique</h3>
-      <img src="../assets/preview-allnotes.png" alt="Fenêtre principale NotesMy" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Tiroir Latéral au Bord de l'Écran</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Éditeur de Notes Minimaliste</h3>
-      <img src="../assets/preview-note.png" alt="Éditeur de note NotesMy" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Icône Moderne Pastel</h3>
-      <img src="../assets/app_icon_1024.png" alt="Icône NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ Graphe de Connaissances IA & Liens Lumineux</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Graphe de Connaissances" width="100%" />
     </td>
   </tr>
 </table>

@@ -98,22 +98,8 @@ brew upgrade --cask notesmy
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ 全部笔记与语义概念检索</h3>
-      <img src="../assets/preview-allnotes.png" alt="全部笔记窗口" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 屏幕边缘滑出式抽屉</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 极简沉浸式笔记编辑</h3>
-      <img src="../assets/preview-note.png" alt="笔记编辑器" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 现代马卡龙渐变图标</h3>
-      <img src="../assets/app_icon_1024.png" alt="应用图标" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ AI 知识图谱与发光连线</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy 知识图谱" width="100%" />
     </td>
   </tr>
 </table>

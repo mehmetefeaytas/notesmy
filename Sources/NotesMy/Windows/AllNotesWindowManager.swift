@@ -8,7 +8,16 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
     private var window: NSWindow?
 
     public func show(filter: AllNotesWindowView.NoteFilter = .active, viewMode: AllNotesWindowView.ViewMode = .list) {
+        let targetScreen = NSScreen.screens.first(where: { $0.localizedName.contains("DELL") }) ?? NSScreen.main ?? NSScreen.screens.first ?? NSScreen()
+        let sFrame = targetScreen.visibleFrame
+
         if let win = window {
+            let width: CGFloat = min(980, sFrame.width - 80)
+            let height: CGFloat = min(660, sFrame.height - 80)
+            let x = sFrame.midX - (width / 2)
+            let y = sFrame.midY - (height / 2)
+            win.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
+
             let allNotesView = AllNotesWindowView(initialFilter: filter, initialViewMode: viewMode)
             win.contentView = NSHostingView(rootView: allNotesView)
             win.makeKeyAndOrderFront(nil)
@@ -16,17 +25,21 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
             return
         }
 
+        let width: CGFloat = min(980, sFrame.width - 80)
+        let height: CGFloat = min(660, sFrame.height - 80)
+        let x = sFrame.midX - (width / 2)
+        let y = sFrame.midY - (height / 2)
+
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 880, height: 580),
+            contentRect: NSRect(x: x, y: y, width: width, height: height),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         win.title = "NotesMy — All Notes"
         win.titlebarAppearsTransparent = true
-        win.center()
+        win.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
         win.isReleasedWhenClosed = false
-        win.setFrameAutosaveName("NotesMyAllNotesWindow")
         win.delegate = self
 
         let allNotesView = AllNotesWindowView(initialFilter: filter, initialViewMode: viewMode)

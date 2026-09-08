@@ -98,22 +98,8 @@ Möchten Sie das Universal-DMG direkt herunterladen? Die neueste Version finden 
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Alle Notizen & Semantische Suche</h3>
-      <img src="../assets/preview-allnotes.png" alt="NotesMy Hauptfenster" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Bildschirmrand-Dock</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Minimalistischer Notizeditor</h3>
-      <img src="../assets/preview-note.png" alt="NotesMy Notizeditor" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Modernes Pastell-App-Icon</h3>
-      <img src="../assets/app_icon_1024.png" alt="NotesMy Icon" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ KI-Wissensgraph & Leuchtende Verbindungen</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Wissensgraph" width="100%" />
     </td>
   </tr>
 </table>

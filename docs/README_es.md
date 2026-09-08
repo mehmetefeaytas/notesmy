@@ -98,22 +98,8 @@ brew upgrade --cask notesmy
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3 align="center">🗂️ Todas las Notas y Búsqueda Semántica</h3>
-      <img src="../assets/preview-allnotes.png" alt="Ventana principal de notas" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🪟 Bandeja Lateral de Borde</h3>
-      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3 align="center">📝 Editor de Notas Minimalista</h3>
-      <img src="../assets/preview-note.png" alt="Editor de notas" width="100%" />
-    </td>
-    <td width="50%">
-      <h3 align="center">🎨 Icono Moderno en Pastel</h3>
-      <img src="../assets/app_icon_1024.png" alt="Icono de NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+      <h3 align="center">🕸️ Grafo de Conocimiento IA & Enlaces Brillantes</h3>
+      <img src="../assets/preview-graph.png" alt="NotesMy Grafo de Conocimiento" width="100%" />
     </td>
   </tr>
 </table>
