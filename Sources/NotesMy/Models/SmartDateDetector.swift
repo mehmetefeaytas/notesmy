@@ -45,19 +45,12 @@ public final class SmartDateDetector: Sendable {
 
     @MainActor
     public func createCalendarEvent(title: String, date: Date) {
-        // Open Calendar or generate ICS / AppleScript to create event
-        let escapedTitle = title.replacingOccurrences(of: "\"", with: "\\\"")
-        let script = """
-        tell application "Calendar"
-            activate
-            tell calendar 1
-                make new event with properties {summary:"\(escapedTitle)", start date:(current date + 3600)}
-            end tell
-        end tell
-        """
-        if let appleScript = NSAppleScript(source: script) {
-            var errorInfo: NSDictionary?
-            appleScript.executeAndReturnError(&errorInfo)
-        }
+        let dummy = NoteItem(
+            title: title,
+            body: "Scheduled event from NotesMy on \(date.formatted(date: .abbreviated, time: .shortened))",
+            color: .amber,
+            reminderDate: date
+        )
+        CalendarSyncService.shared.openInCalendarApp(note: dummy)
     }
 }

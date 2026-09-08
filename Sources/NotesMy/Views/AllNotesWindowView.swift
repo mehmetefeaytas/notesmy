@@ -81,6 +81,7 @@ public struct AllNotesWindowView: View {
             case .list:
                 NavigationSplitView {
                     sidebarContent
+                        .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 440)
                 } detail: {
                     detailContent
                 }
@@ -93,6 +94,16 @@ public struct AllNotesWindowView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 540)
+        .onChange(of: selectedFilter) { _ in
+            if let id = selectedNoteId, !filteredNotes.contains(where: { $0.id == id }) {
+                selectedNoteId = filteredNotes.first?.id
+            }
+        }
+        .onChange(of: filteredNotes) { newNotes in
+            if let id = selectedNoteId, !newNotes.contains(where: { $0.id == id }) {
+                selectedNoteId = newNotes.first?.id
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Picker("View Mode", selection: $viewMode) {
@@ -305,7 +316,7 @@ public struct AllNotesWindowView: View {
                             .lineLimit(1)
 
                         HStack(spacing: 6) {
-                            Text(note.category)
+                            Text(loc.localizedCategory(note.category))
                                 .font(.system(size: 9, weight: .medium))
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
@@ -349,6 +360,7 @@ public struct AllNotesWindowView: View {
                 .tag(note.id)
             }
             .listStyle(.sidebar)
+            .frame(minHeight: 250, maxHeight: .infinity)
 
             // Undo banner if item deleted
             if let deleted = store.recentlyDeletedNote {
@@ -375,10 +387,11 @@ public struct AllNotesWindowView: View {
 
     private func categoryButton(title: String) -> some View {
         let isSelected = selectedCategory == title
+        let displayTitle = loc.localizedCategory(title)
         return Button(action: {
             selectedCategory = title
         }) {
-            Text(title)
+            Text(displayTitle)
                 .font(.system(size: 11, weight: isSelected ? .bold : .regular))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)

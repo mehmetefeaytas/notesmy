@@ -1,14 +1,20 @@
 import AppKit
 import SwiftUI
 
+// Custom NSPanel subclass that allows keyboard input even without a titlebar
+public final class KeyableNotePanel: NSPanel {
+    public override var canBecomeKey: Bool { true }
+    public override var canBecomeMain: Bool { true }
+}
+
 @MainActor
 public final class NoteWindowManager: NSObject, NSWindowDelegate {
     public static let shared = NoteWindowManager()
 
-    private var activePanels: [UUID: NSPanel] = [:]
+    private var activePanels: [UUID: KeyableNotePanel] = [:]
 
     public func openNote(id: UUID, on targetScreen: NSScreen? = nil) {
-        // If already open, bring to front
+        // If already open, bring to front and focus
         if let existing = activePanels[id] {
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -17,9 +23,12 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
 
         guard let note = NoteStore.shared.notes.first(where: { $0.id == id }) else { return }
 
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 420),
-            styleMask: [.borderless, .nonactivatingPanel],
+        let defaultWidth: CGFloat = 380
+        let defaultHeight: CGFloat = 420
+
+        let panel = KeyableNotePanel(
+            contentRect: NSRect(x: 0, y: 0, width: defaultWidth, height: defaultHeight),
+            styleMask: [.borderless, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -32,6 +41,8 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
         panel.delegate = self
+        panel.minSize = NSSize(width: 320, height: 260)
+        panel.maxSize = NSSize(width: 900, height: 1200)
 
         let editorView = NoteEditorView(noteId: id, store: NoteStore.shared) { [weak self, weak panel] in
             panel?.close()
@@ -42,8 +53,6 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
 
         let screen = targetScreen ?? NSScreen.main ?? NSScreen.screens[0]
         let screenFrame = screen.visibleFrame
-        let defaultWidth: CGFloat = 380
-        let defaultHeight: CGFloat = 420
 
         var x: CGFloat = screenFrame.maxX - defaultWidth - 280
         var y: CGFloat = screenFrame.midY - (defaultHeight / 2)

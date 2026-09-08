@@ -1,9 +1,37 @@
 import AppKit
 import Carbon
 
+public enum HotKeyModifierOption: String, CaseIterable, Identifiable, Codable {
+    case optionCommand = "⌥⌘ Option + Command"
+    case controlOption = "⌃⌥ Control + Option"
+    case commandShift = "⇧⌘ Shift + Command"
+
+    public var id: String { rawValue }
+
+    public var prefix: String {
+        switch self {
+        case .optionCommand: return "⌥⌘"
+        case .controlOption: return "⌃⌥"
+        case .commandShift:  return "⇧⌘"
+        }
+    }
+
+    public var carbonModifier: UInt32 {
+        switch self {
+        case .optionCommand: return UInt32(cmdKey | optionKey)
+        case .controlOption: return UInt32(controlKey | optionKey)
+        case .commandShift:  return UInt32(cmdKey | shiftKey)
+        }
+    }
+}
+
 @MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
+    public static private(set) var shared: AppDelegate?
+
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.shared = self
+
         // Run as accessory app (no clutter in Dock, stays active in menu bar & edge)
         NSApp.setActivationPolicy(.accessory)
 
@@ -17,39 +45,41 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         setupGlobalHotkeys()
     }
 
-    private func setupGlobalHotkeys() {
-        let optCmd: UInt32 = UInt32(cmdKey | optionKey)
+    public func setupGlobalHotkeys() {
+        HotKeyManager.shared.unregisterAll()
+
+        let mod = NoteStore.shared.hotkeyModifier.carbonModifier
         let ctrlOptCmd: UInt32 = UInt32(cmdKey | optionKey | controlKey)
 
-        // ⌥⌘N -> New Note (ANSI N = 45)
-        HotKeyManager.shared.registerHotKey(keyCode: 45, modifiers: optCmd) {
+        // New Note (ANSI N = 45)
+        HotKeyManager.shared.registerHotKey(keyCode: 45, modifiers: mod) {
             let note = NoteStore.shared.createNote()
             NoteWindowManager.shared.openNote(id: note.id)
         }
 
-        // ⌥⌘V -> Quick Capture from Clipboard (ANSI V = 9)
-        HotKeyManager.shared.registerHotKey(keyCode: 9, modifiers: optCmd) {
+        // Quick Capture from Clipboard (ANSI V = 9)
+        HotKeyManager.shared.registerHotKey(keyCode: 9, modifiers: mod) {
             if let note = ClipboardService.shared.captureToNewNote() {
                 NoteWindowManager.shared.openNote(id: note.id)
             }
         }
 
-        // ⌥⌘L -> All Notes (ANSI L = 37)
-        HotKeyManager.shared.registerHotKey(keyCode: 37, modifiers: optCmd) {
+        // All Notes & Search (ANSI L = 37)
+        HotKeyManager.shared.registerHotKey(keyCode: 37, modifiers: mod) {
             AllNotesWindowManager.shared.show()
         }
 
-        // ⌥⌘A -> Archive / All Notes (ANSI A = 0)
-        HotKeyManager.shared.registerHotKey(keyCode: 0, modifiers: optCmd) {
+        // Archive (ANSI A = 0)
+        HotKeyManager.shared.registerHotKey(keyCode: 0, modifiers: mod) {
             AllNotesWindowManager.shared.show()
         }
 
-        // ⌥⌘B -> Sticky Board (ANSI B = 11)
-        HotKeyManager.shared.registerHotKey(keyCode: 11, modifiers: optCmd) {
+        // Sticky Board (ANSI B = 11)
+        HotKeyManager.shared.registerHotKey(keyCode: 11, modifiers: mod) {
             AllNotesWindowManager.shared.show()
         }
 
-        // ⌃⌥⌘H -> Toggle Deck (ANSI H = 4)
+        // Toggle Deck (ANSI H = 4)
         HotKeyManager.shared.registerHotKey(keyCode: 4, modifiers: ctrlOptCmd) {
             EdgeDeckWindowManager.shared.toggleVisibility()
         }

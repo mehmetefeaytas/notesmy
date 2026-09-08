@@ -31,6 +31,8 @@ jobs:
     name: 🧪 Swift Tests
     runs-on: macos-15         # Apple Silicon runner (M1), Xcode 15+
     timeout-minutes: 15
+    # Enforce: Strictly maintainer-only release execution
+    if: github.repository_owner == 'mehmetefeaytas' && (github.actor == 'mehmetefeaytas' || github.event_name == 'push')
     steps:
       - name: Checkout
         uses: actions/checkout@v4

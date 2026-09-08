@@ -121,6 +121,103 @@ public final class LocalizationService: ObservableObject {
         case .chinese:    return key.zh
         }
     }
+
+    public func localizedCategory(_ name: String) -> String {
+        switch name.lowercased() {
+        case "all":
+            switch language {
+            case .english: return "All"
+            case .turkish: return "Tümü"
+            case .german: return "Alle"
+            case .french: return "Tous"
+            case .spanish: return "Todas"
+            case .portuguese: return "Todas"
+            case .italian: return "Tutte"
+            case .russian: return "Все"
+            case .japanese: return "すべて"
+            case .korean: return "전체"
+            case .arabic: return "الكل"
+            case .chinese: return "全部"
+            }
+        case "general":
+            switch language {
+            case .english: return "General"
+            case .turkish: return "Genel"
+            case .german: return "Allgemein"
+            case .french: return "Général"
+            case .spanish: return "General"
+            case .portuguese: return "Geral"
+            case .italian: return "Generale"
+            case .russian: return "Общее"
+            case .japanese: return "一般"
+            case .korean: return "일반"
+            case .arabic: return "عام"
+            case .chinese: return "常规"
+            }
+        case "work":
+            switch language {
+            case .english: return "Work"
+            case .turkish: return "İş"
+            case .german: return "Arbeit"
+            case .french: return "Travail"
+            case .spanish: return "Trabajo"
+            case .portuguese: return "Trabalho"
+            case .italian: return "Lavoro"
+            case .russian: return "Работа"
+            case .japanese: return "仕事"
+            case .korean: return "업무"
+            case .arabic: return "عمل"
+            case .chinese: return "工作"
+            }
+        case "personal":
+            switch language {
+            case .english: return "Personal"
+            case .turkish: return "Kişisel"
+            case .german: return "Persönlich"
+            case .french: return "Personnel"
+            case .spanish: return "Personal"
+            case .portuguese: return "Pessoal"
+            case .italian: return "Personale"
+            case .russian: return "Личное"
+            case .japanese: return "個人"
+            case .korean: return "개인"
+            case .arabic: return "شخصي"
+            case .chinese: return "个人"
+            }
+        case "code":
+            switch language {
+            case .english: return "Code"
+            case .turkish: return "Kod"
+            case .german: return "Code"
+            case .french: return "Code"
+            case .spanish: return "Código"
+            case .portuguese: return "Código"
+            case .italian: return "Codice"
+            case .russian: return "Код"
+            case .japanese: return "コード"
+            case .korean: return "코드"
+            case .arabic: return "كود"
+            case .chinese: return "代码"
+            }
+        case "ideas":
+            switch language {
+            case .english: return "Ideas"
+            case .turkish: return "Fikirler"
+            case .german: return "Ideen"
+            case .french: return "Idées"
+            case .spanish: return "Ideas"
+            case .portuguese: return "Ideias"
+            case .italian: return "Idee"
+            case .russian: return "Идеи"
+            case .japanese: return "アイデア"
+            case .korean: return "아이디어"
+            case .arabic: return "أفكار"
+            case .chinese: return "灵感"
+            }
+        default:
+            return name
+        }
+    }
 }
 
 public enum LocalizationKey {

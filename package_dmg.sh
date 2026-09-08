@@ -2,7 +2,7 @@
 set -e
 
 APP_NAME="NotesMy"
-VERSION="1.5.3"
+VERSION="1.6.0"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 APP_BUNDLE="${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"
@@ -19,6 +19,9 @@ mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 
 cp ".build/apple/Products/Release/${APP_NAME}" "${MACOS_DIR}/${APP_NAME}"
 cp "Resources/Info.plist" "${CONTENTS_DIR}/Info.plist"
+if [ -f "Resources/AppIcon.icns" ]; then
+  cp "Resources/AppIcon.icns" "${RESOURCES_DIR}/AppIcon.icns"
+fi
 echo -n "APPL????" > "${CONTENTS_DIR}/PkgInfo"
 
 echo "🔏 3. Ad-hoc code signing..."

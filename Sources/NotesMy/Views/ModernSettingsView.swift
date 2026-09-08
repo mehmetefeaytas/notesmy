@@ -246,17 +246,38 @@ public struct ModernSettingsView: View {
 
     private var hotkeysSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            headerTitle(title: loc.text(.shortcutsTab), subtitle: "Global keyboard shortcuts for instant productivity")
+            headerTitle(title: loc.text(.shortcutsTab), subtitle: loc.language == .turkish ? "Hızlı verimlilik için global klavye kısayollarını özelleştirin" : "Customize global keyboard shortcuts for instant productivity")
 
-            GroupBox {
+            GroupBox(loc.language == .turkish ? "Kısayol Tuş Kombinasyonu (Değiştirici)" : "Global Shortcut Modifier") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("", selection: $store.hotkeyModifier) {
+                        ForEach(HotKeyModifierOption.allCases) { opt in
+                            Text(opt.rawValue).tag(opt)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    .onChange(of: store.hotkeyModifier) { _ in
+                        store.saveSettings()
+                        AppDelegate.shared?.setupGlobalHotkeys()
+                    }
+
+                    Text(loc.language == .turkish ? "Kısayol kombinasyonunu değiştirdiğinizde tüm kısayollar anında güncellenir." : "Changing the modifier updates all global productivity shortcuts immediately.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(8)
+            }
+
+            GroupBox(loc.language == .turkish ? "Aktif Kısayollar" : "Active Global Shortcuts") {
                 VStack(spacing: 8) {
-                    hotkeyItem(title: "New Sticky Note", keys: "⌥⌘N")
-                    hotkeyItem(title: "Quick Capture from Clipboard", keys: "⌥⌘V")
-                    hotkeyItem(title: "All Notes & Semantic Search", keys: "⌥⌘L")
-                    hotkeyItem(title: "Open Sticky Board Canvas", keys: "⌥⌘B")
-                    hotkeyItem(title: "Toggle Deck Edge Visibility", keys: "⌃⌥⌘H")
-                    hotkeyItem(title: "Previous / Next Note", keys: "⌘[ / ⌘]")
-                    hotkeyItem(title: "Close Note Window", keys: "Esc")
+                    hotkeyItem(title: loc.text(.newNote), keys: "\(store.hotkeyModifier.prefix)N")
+                    hotkeyItem(title: loc.text(.quickCapture), keys: "\(store.hotkeyModifier.prefix)V")
+                    hotkeyItem(title: loc.text(.allNotes), keys: "\(store.hotkeyModifier.prefix)L")
+                    hotkeyItem(title: loc.text(.stickyBoard), keys: "\(store.hotkeyModifier.prefix)B")
+                    hotkeyItem(title: loc.text(.archive), keys: "\(store.hotkeyModifier.prefix)A")
+                    hotkeyItem(title: loc.language == .turkish ? "Kenar Çubuğunu Aç/Kapat" : "Toggle Deck Edge Visibility", keys: "⌃⌥⌘H")
+                    hotkeyItem(title: loc.language == .turkish ? "Önceki / Sonraki Not" : "Previous / Next Note", keys: "⌘[ / ⌘]")
+                    hotkeyItem(title: loc.language == .turkish ? "Not Penceresini Kapat" : "Close Note Window", keys: "Esc")
                 }
                 .padding(8)
             }

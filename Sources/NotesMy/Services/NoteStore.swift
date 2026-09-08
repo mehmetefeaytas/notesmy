@@ -28,6 +28,7 @@ public final class NoteStore: ObservableObject {
     @Published public var selectedFont: FontFamilyOption = .modern
     @Published public var fontSize: CGFloat = 13
     @Published public var cardSize: CardSizeOption = .standard
+    @Published public var hotkeyModifier: HotKeyModifierOption = .optionCommand
 
     // Categories & Collections (SideNotes feature)
     @Published public var categories: [String] = ["General", "Work", "Personal", "Code", "Ideas"]
@@ -355,6 +356,22 @@ public final class NoteStore: ObservableObject {
         saveNotes()
     }
 
+    public func addAttachment(noteId: UUID, attachment: NoteAttachment) {
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].attachments.append(attachment)
+            notes[index].updatedAt = Date()
+            saveNotes()
+        }
+    }
+
+    public func removeAttachment(noteId: UUID, attachmentId: UUID) {
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].attachments.removeAll(where: { $0.id == attachmentId })
+            notes[index].updatedAt = Date()
+            saveNotes()
+        }
+    }
+
     public func cycleNote(forward: Bool) {
         let active = activeNotes
         guard !active.isEmpty else { return }
@@ -434,6 +451,7 @@ public final class NoteStore: ObservableObject {
             var selectedFont: FontFamilyOption?
             var fontSize: CGFloat?
             var cardSize: CardSizeOption?
+            var hotkeyModifier: HotKeyModifierOption?
         }
         let settings = Settings(
             dockSide: dockSide,
@@ -442,7 +460,8 @@ public final class NoteStore: ObservableObject {
             categories: categories,
             selectedFont: selectedFont,
             fontSize: fontSize,
-            cardSize: cardSize
+            cardSize: cardSize,
+            hotkeyModifier: hotkeyModifier
         )
         if let data = try? JSONEncoder().encode(settings) {
             try? data.write(to: settingsFileURL, options: .atomic)
@@ -460,6 +479,7 @@ public final class NoteStore: ObservableObject {
             var selectedFont: FontFamilyOption?
             var fontSize: CGFloat?
             var cardSize: CardSizeOption?
+            var hotkeyModifier: HotKeyModifierOption?
         }
         if let settings = try? JSONDecoder().decode(Settings.self, from: data) {
             self.dockSide = settings.dockSide
@@ -476,6 +496,9 @@ public final class NoteStore: ObservableObject {
             }
             if let card = settings.cardSize {
                 self.cardSize = card
+            }
+            if let mod = settings.hotkeyModifier {
+                self.hotkeyModifier = mod
             }
         }
     }

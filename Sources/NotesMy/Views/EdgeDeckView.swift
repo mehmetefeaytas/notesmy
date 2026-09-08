@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct EdgeDeckView: View {
     @ObservedObject var store = NoteStore.shared
+    @ObservedObject var loc = LocalizationService.shared
     public var onSelectNote: (UUID) -> Void
     public var onNewNote: () -> Void
     public var onOpenAllNotes: () -> Void
@@ -109,14 +110,14 @@ public struct EdgeDeckView: View {
                 }
 
                 if displayedNotes.isEmpty {
-                    Text("No notes in \(store.selectedCategory)")
+                    Text("No notes in \(loc.localizedCategory(store.selectedCategory))")
                         .font(.system(size: 11, design: .rounded))
                         .foregroundColor(.secondary)
                         .padding(8)
                 }
 
                 if displayedNotes.count > 6 {
-                    Text("+\(displayedNotes.count - 6) more in All Notes")
+                    Text("+\(displayedNotes.count - 6) \(loc.text(.allNotes))")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 10)
@@ -128,7 +129,7 @@ public struct EdgeDeckView: View {
             // Quick Control Bar
             HStack(spacing: 6) {
                 Button(action: onNewNote) {
-                    Label("New", systemImage: "plus")
+                    Label(loc.text(.newNote), systemImage: "plus")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
@@ -214,9 +215,9 @@ public struct EdgeDeckView: View {
     private var categoryFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 5) {
-                categoryTab(title: "All")
+                categoryTab(key: "All")
                 ForEach(store.categories, id: \.self) { cat in
-                    categoryTab(title: cat)
+                    categoryTab(key: cat)
                 }
             }
             .padding(4)
@@ -228,14 +229,15 @@ public struct EdgeDeckView: View {
         )
     }
 
-    private func categoryTab(title: String) -> some View {
-        let isSelected = store.selectedCategory == title
+    private func categoryTab(key: String) -> some View {
+        let isSelected = store.selectedCategory == key
+        let displayTitle = loc.localizedCategory(key)
         return Button(action: {
             withAnimation(.easeInOut(duration: 0.15)) {
-                store.selectedCategory = title
+                store.selectedCategory = key
             }
         }) {
-            Text(title)
+            Text(displayTitle)
                 .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)

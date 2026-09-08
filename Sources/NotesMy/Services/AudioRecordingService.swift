@@ -10,12 +10,10 @@ public final class AudioRecordingService: NSObject, ObservableObject {
     @Published public var liveTranscript: String = ""
     @Published public var audioMeterLevel: Float = 0.0
 
-    private var audioRecorder: AVAudioRecorder?
     private var speechRecognizer: SFSpeechRecognizer?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-    private let audioEngine = AVAudioEngine()
-    private var currentRecordingURL: URL?
+    private var audioEngine: AVAudioEngine?
 
     public override init() {
         super.init()
@@ -41,29 +39,46 @@ public final class AudioRecordingService: NSObject, ObservableObject {
     public func startRecording(language: AppLanguage = .english, onTranscription: @escaping (String) -> Void) {
         stopRecording()
 
-        let locale = Locale(identifier: language.speechLocale)
-        speechRecognizer = SFSpeechRecognizer(locale: locale)
-
-        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
-            // Fallback to English if the requested locale isn't available on this device
-            let fallback = Locale(identifier: AppLanguage.english.speechLocale)
-            speechRecognizer = SFSpeechRecognizer(locale: fallback)
-            guard let fallbackRecognizer = speechRecognizer, fallbackRecognizer.isAvailable else {
-                print("Speech recognizer is not available for locale: \(locale.identifier)")
-                return
-            }
-            print("⚠️ Speech locale \(locale.identifier) unavailable, falling back to en-US")
+        // Verify speech recognition authorization
+        let authStatus = SFSpeechRecognizer.authorizationStatus()
+        guard authStatus == .authorized || authStatus == .notDetermined else {
+            print("Speech recognition not authorized (status: \(authStatus.rawValue))")
             return
         }
 
-        let inputNode = audioEngine.inputNode
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else { return }
+        // Initialize recognizer with requested locale, with fallback to en-US
+        let locale = Locale(identifier: language.speechLocale)
+        var targetRecognizer = SFSpeechRecognizer(locale: locale)
 
-        recognitionRequest.shouldReportPartialResults = true
-        recognitionRequest.addsPunctuation = true
+        if targetRecognizer == nil || !targetRecognizer!.isAvailable {
+            let fallbackLocale = Locale(identifier: AppLanguage.english.speechLocale)
+            targetRecognizer = SFSpeechRecognizer(locale: fallbackLocale)
+        }
 
-        recognitionTask = recognizer.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+        guard let recognizer = targetRecognizer, recognizer.isAvailable else {
+            print("Speech recognizer unavailable for \(language.displayName)")
+            return
+        }
+        self.speechRecognizer = recognizer
+
+        let engine = AVAudioEngine()
+        self.audioEngine = engine
+
+        let inputNode = engine.inputNode
+        let bus = 0
+        let format = inputNode.inputFormat(forBus: bus)
+
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            print("Invalid audio input format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
+            return
+        }
+
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.addsPunctuation = true
+        self.recognitionRequest = request
+
+        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 if let result = result {
                     let text = result.bestTranscription.formattedString
@@ -76,26 +91,32 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             }
         }
 
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        inputNode.removeTap(onBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
+        inputNode.installTap(onBus: bus, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
         }
 
-        audioEngine.prepare()
+        engine.prepare()
         do {
-            try audioEngine.start()
+            try engine.start()
             isRecording = true
             liveTranscript = ""
         } catch {
-            print("Failed to start audio engine: \(error)")
+            print("Failed to start AVAudioEngine: \(error)")
+            stopRecording()
         }
     }
 
     public func stopRecording() {
-        guard isRecording else { return }
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        guard isRecording || audioEngine != nil else { return }
+
+        if let engine = audioEngine {
+            if engine.isRunning {
+                engine.stop()
+            }
+            engine.inputNode.removeTap(onBus: 0)
+            audioEngine = nil
+        }
+
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
 

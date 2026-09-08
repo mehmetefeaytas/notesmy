@@ -7,11 +7,20 @@ public final class HotKeyManager: @unchecked Sendable {
 
     public typealias HotKeyHandler = () -> Void
     private var hotKeys: [UInt32: HotKeyHandler] = [:]
+    private var registeredRefs: [UInt32: EventHotKeyRef] = [:]
     private var eventHandlerRef: EventHandlerRef?
     private var nextHotKeyId: UInt32 = 1
 
     private init() {
         setupCarbonEventHandler()
+    }
+
+    public func unregisterAll() {
+        for (_, ref) in registeredRefs {
+            UnregisterEventHotKey(ref)
+        }
+        registeredRefs.removeAll()
+        hotKeys.removeAll()
     }
 
     private func setupCarbonEventHandler() {
@@ -62,8 +71,9 @@ public final class HotKeyManager: @unchecked Sendable {
             &hotKeyRef
         )
 
-        if status == noErr {
+        if status == noErr, let ref = hotKeyRef {
             hotKeys[hotKeyId] = handler
+            registeredRefs[hotKeyId] = ref
             return hotKeyId
         } else {
             print("Failed to register hotkey with status: \(status)")
