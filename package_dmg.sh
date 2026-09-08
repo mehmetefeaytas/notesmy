@@ -39,7 +39,7 @@ cp "${DMG_NAME}" "${APP_NAME}.dmg"
 echo "🗜️ 6. Also packaging ${APP_NAME}.zip for alternative distribution..."
 zip -r -q -y "${APP_NAME}.zip" "${APP_BUNDLE}"
 
-rm -rf "${STAGING_DIR}"
+rm -rf "${STAGING_DIR}" "${APP_BUNDLE}"
 
 echo "🔑 7. Calculating SHA-256 checksum..."
 SHA_VALUE=$(shasum -a 256 "${DMG_NAME}" | awk '{print $1}')
