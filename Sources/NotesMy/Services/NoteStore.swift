@@ -24,6 +24,11 @@ public final class NoteStore: ObservableObject {
     @Published public var showOverFullScreen: Bool = true
     @Published public var recentlyDeletedNote: NoteItem? = nil
 
+    // Appearance settings
+    @Published public var selectedFont: FontFamilyOption = .modern
+    @Published public var fontSize: CGFloat = 13
+    @Published public var cardSize: CardSizeOption = .standard
+
     // Categories & Collections (SideNotes feature)
     @Published public var categories: [String] = ["General", "Work", "Personal", "Code", "Ideas"]
     @Published public var selectedCategory: String = "All"
@@ -131,6 +136,16 @@ public final class NoteStore: ObservableObject {
             .sorted(by: { $0.updatedAt > $1.updatedAt })
     }
 
+    public var favoriteNotes: [NoteItem] {
+        notes.filter { !$0.isArchived && $0.isFavorite }
+            .sorted(by: { $0.updatedAt > $1.updatedAt })
+    }
+
+    public var pinnedNotes: [NoteItem] {
+        notes.filter { !$0.isArchived && $0.isPinned }
+            .sorted(by: { $0.updatedAt > $1.updatedAt })
+    }
+
     public var selectedNote: NoteItem? {
         guard let id = selectedNoteId else { return nil }
         return notes.first(where: { $0.id == id })
@@ -203,6 +218,41 @@ public final class NoteStore: ObservableObject {
             notes[index].isFolded.toggle()
             notes[index].updatedAt = Date()
             saveNotes()
+        }
+    }
+
+    public func toggleFavorite(noteId: UUID) {
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].isFavorite.toggle()
+            notes[index].updatedAt = Date()
+            saveNotes()
+        }
+    }
+
+    public func togglePin(noteId: UUID) {
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].isPinned.toggle()
+            notes[index].updatedAt = Date()
+            saveNotes()
+        }
+    }
+
+    public func setReminder(noteId: UUID, date: Date?) {
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].reminderDate = date
+            notes[index].updatedAt = Date()
+            saveNotes()
+            if let targetDate = date {
+                let note = notes[index]
+                ReminderService.shared.scheduleReminder(
+                    noteId: note.id,
+                    title: note.displayTitle,
+                    body: note.previewSnippet,
+                    date: targetDate
+                )
+            } else {
+                ReminderService.shared.cancelReminder(for: noteId)
+            }
         }
     }
 
@@ -321,12 +371,18 @@ public final class NoteStore: ObservableObject {
             var activationDelay: Double
             var showOverFullScreen: Bool
             var categories: [String]
+            var selectedFont: FontFamilyOption?
+            var fontSize: CGFloat?
+            var cardSize: CardSizeOption?
         }
         let settings = Settings(
             dockSide: dockSide,
             activationDelay: activationDelay,
             showOverFullScreen: showOverFullScreen,
-            categories: categories
+            categories: categories,
+            selectedFont: selectedFont,
+            fontSize: fontSize,
+            cardSize: cardSize
         )
         if let data = try? JSONEncoder().encode(settings) {
             try? data.write(to: settingsFileURL, options: .atomic)
@@ -341,6 +397,9 @@ public final class NoteStore: ObservableObject {
             var activationDelay: Double
             var showOverFullScreen: Bool
             var categories: [String]?
+            var selectedFont: FontFamilyOption?
+            var fontSize: CGFloat?
+            var cardSize: CardSizeOption?
         }
         if let settings = try? JSONDecoder().decode(Settings.self, from: data) {
             self.dockSide = settings.dockSide
@@ -348,6 +407,15 @@ public final class NoteStore: ObservableObject {
             self.showOverFullScreen = settings.showOverFullScreen
             if let cats = settings.categories, !cats.isEmpty {
                 self.categories = cats
+            }
+            if let font = settings.selectedFont {
+                self.selectedFont = font
+            }
+            if let size = settings.fontSize {
+                self.fontSize = size
+            }
+            if let card = settings.cardSize {
+                self.cardSize = card
             }
         }
     }

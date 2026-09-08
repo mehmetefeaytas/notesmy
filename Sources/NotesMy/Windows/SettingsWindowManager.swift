@@ -15,16 +15,16 @@ public final class SettingsWindowManager: NSObject, NSWindowDelegate {
         }
 
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 480),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        win.title = "NotesMy Settings"
+        win.title = "NotesMy — Settings"
         win.center()
         win.delegate = self
 
-        let settingsView = SettingsView()
+        let settingsView = ModernSettingsView()
         win.contentView = NSHostingView(rootView: settingsView)
 
         self.window = win

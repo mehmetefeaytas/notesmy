@@ -1,11 +1,12 @@
 # NotesMy 📌
 
-> **Frictionless, edge-docked sticky notes and smart scratchpad for macOS.**  
+> **Frictionless, edge-docked sticky notes, 2D sticky board canvas, and smart scratchpad for macOS.**  
 > Powered natively by Swift 6, AppKit, SwiftUI, and **Apple Intelligence**. Zero clutter, zero subscriptions, zero tracking.
 
 [![macOS](https://img.shields.io/badge/macOS-13.0%2B-black?style=flat&logo=apple)](https://apple.com)
 [![Homebrew Cask](https://img.shields.io/badge/Homebrew-Cask-blue?style=flat&logo=homebrew)](https://github.com/mehmetefeaytas/homebrew-tap)
 [![Apple Intelligence](https://img.shields.io/badge/Apple%20Intelligence-Ready-purple?style=flat&logo=apple)](README.md)
+[![Language](https://img.shields.io/badge/Languages-EN%20%7C%20TR-orange)](README.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-green)](README.md)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](README.md)
@@ -34,15 +35,18 @@ Or download the universal `.dmg` installer directly from the [Releases page](htt
 
 ---
 
-## 🌟 Why NotesMy?
+## 🌟 What's New in v1.4.0 🚀
 
-Traditional sticky notes clutter your workspace, get buried under app windows, and turn your desktop into visual noise. On the other hand, heavy markdown or note-taking apps like Notion or Obsidian demand deliberate window management and context-switching for quick thoughts.
-
-**NotesMy** combines the best concepts from **HoldMyNotes**, **SideNotes**, **Tot**, and **Unclutter**, seamlessly infused with **Apple Intelligence**:
-* It sleeps on the screen edge as an elegant, 14pt vertical pill with colored dashes.
-* Reach for it with your mouse, and your notes **fan out smoothly** along the edge.
-* Select any note to expand it in-place, write your thoughts, and watch it auto-save locally within 300ms.
-* **Now with Multi-Display & Apple Notes Integration**: Follows your cursor across multiple connected screens, and lets you 1-click export to Apple Notes and Apple Reminders!
+- 🇹🇷 **Multi-Language Support (English & Türkçe):** Seamless UI localization with on-the-fly switching in Settings.
+- 📌 **2D Freeform Sticky Board:** Interactive corkboard canvas with free draggable sticky cards, pushpins, and pan/zoom navigation (`⌥⌘B`).
+- 🎙️ **Voice Notes & Live Transcription:** On-device audio recording with instant speech-to-text powered by Apple `SFSpeechRecognizer` (Turkish & English).
+- 📸 **Direct Screenshot Capture:** Interactive screen selection (`/usr/sbin/screencapture -i`) that instantly attaches to your note.
+- 🔍 **On-Device Vision OCR:** Extract text from screenshots, photos, and receipts using the Apple `Vision` framework.
+- 🧠 **AI Messy Note Clean-Up & Smart Summaries:** One-click braindump structuring into organized paragraphs, bullet points, and actionable checklists.
+- ⚡ **Semantic Vector Search:** Deep conceptual and synonym search using Apple `NaturalLanguage` word embeddings (`NLEmbedding`).
+- 🔤 **Customizable Typography & Card Sizes:** Choose between 5 font styles (Rounded, Modern, Handwriting, Monospaced, Serif), adjust font size (11–22pt), and select card dimension presets.
+- 🔔 **Native macOS Reminders & Alerts:** Schedule local notification alerts directly from note dates.
+- ⚙️ **Modern Multi-Tab Settings:** Redesigned macOS Ventura/Sonoma/Sequoia settings window with live card typography preview.
 
 ---
 
@@ -64,10 +68,6 @@ Traditional sticky notes clutter your workspace, get buried under app windows, a
             opacity slider, natural language date detection, code mode, and desktop pin.
 ```
 
-<p align="center">
-  <img src="assets/preview-allnotes.png" width="700" alt="NotesMy All Notes Window & Live Editor" />
-</p>
-
 ---
 
 ## 🧠 Apple Intelligence & On-Device AI Features
@@ -75,56 +75,52 @@ Traditional sticky notes clutter your workspace, get buried under app windows, a
 ### 🪄 1. Native macOS Writing Tools Integration
 On macOS 15+ Sequoia and macOS 26, NotesMy activates native system **Apple Intelligence Writing Tools** (`.writingToolsBehavior(.complete)`). Select text or right-click to trigger Proofread, Rewrite, Friendly, Professional, Summary, or Table generation directly inside your sticky notes!
 
-### 🎯 2. Instant Action Item Extraction
-Have messy meeting notes or a braindump? Click **AI › Extract Action Items** to automatically scan your text and generate an interactive `- [ ] ` checklist at the top of your note.
+### 🧹 2. Format & Clean Up Messy Braindumps
+Dump unorganized thoughts into a note and click **AI › Format & Organize Messy Note**. On-device AI extracts main takeaways, formats structured paragraphs, and turns to-dos into an interactive `- [ ] ` checklist.
 
-### 📜 3. On-Device TL;DR Summarization
-Turn long thoughts into punchy executive summaries with 1 click using on-device NaturalLanguage processing.
+### 📜 3. On-Device Executive Summarization
+Turn lengthy meeting transcripts or lectures into punchy executive summaries with 1 click using on-device NaturalLanguage processing.
 
-### 💡 4. Smart Title & Category Prediction
+### 🔍 4. Semantic Concept Search
+Find notes even if you don't remember the exact keywords. Toggle **Semantic Search** in the search library to match notes by meaning, concepts, and synonyms using Apple `NLEmbedding`.
+
+### 💡 5. Smart Title & Category Prediction
 Never worry about naming notes again. Click **AI › Suggest Smart Title** or **AI › Auto-Categorize** to let on-device AI classify your thoughts into *Work*, *Code*, *Ideas*, or *Personal*.
-
-### ✍️ 5. Tone & Structure Rewriter
-Easily polish your text into **Concise & Punchy**, **Professional**, or **Bullet Points** without sending a single byte to external cloud servers.
 
 ---
 
 ## ✨ Full Feature Matrix
 
+### 📌 2D Sticky Board Canvas
+Need a spatial view of your thoughts? Open the **Sticky Board** (`⌥⌘B` or via toolbar) to view a corkboard canvas where you can freely drag cards around, zoom in and out, and organize by categories.
+
+### 🎙️ Voice Notes with Live Speech-to-Text
+Tap the microphone button to dictate notes hands-free. Transcription happens 100% on-device with zero latency, supporting both Turkish (`tr-TR`) and English (`en-US`).
+
+### 📸 Direct Screenshot & Vision OCR
+Click the camera icon to select any region of your screen. The screenshot is saved locally into your note attachments. Tap the OCR button (`text.viewfinder`) to extract all text directly into editable Markdown.
+
+### 🔔 Native Notifications & Reminders
+Set reminders with specific dates and times. NotesMy delivers local macOS notifications (`UNUserNotificationCenter`) that open the exact note when clicked.
+
 ### 🖥️ Multi-Display & Cursor Following
 Seamlessly supports dual or triple monitor setups. As your pointer moves between displays, NotesMy automatically aligns with the edge of your active monitor so notes are always right where your attention is.
 
 ### 🍎 Apple Notes & Reminders 1-Click Bridge
-Need to push your scratchpad thought into your permanent knowledge base or task list?
-- Tap the **Apple Notes** button to instantly create a note in your Apple Notes account.
+- Tap the **Apple Notes** button to export directly to your Apple Notes account.
 - Tap the **Reminders** button to turn tasks into macOS Reminders with due dates!
 
-### 📂 Folders & Topic Collections *(SideNotes inspired)*
-Organize your scratchpad notes by topics: **Work**, **Personal**, **Code**, **Ideas**, and **General**. Filter the active deck with one click directly at the top of the edge fan, or view by collection in the All Notes library.
-
 ### 📋 Clipboard History Hub *(Unclutter inspired)*
-Never lose a snippet. Click the clipboard icon on the deck or menu bar to open your recent clipboard history and convert any copied text or URL into a fresh sticky note with 1 click. Or hit `⌥⌘V` anywhere for instant capture.
+Click the clipboard icon on the deck or menu bar to open your recent clipboard history and convert any copied text or URL into a fresh sticky note with 1 click. Or hit `⌥⌘V` anywhere for instant capture.
 
-### 🪟 Adjustable Window Translucency & Glassmorphism *(Noticky inspired)*
-Working on UI design or copying code from a browser window behind your note? Use the built-in Opacity Slider (40%–100%) to make your sticky notes translucent and see right through them.
+### 🪟 Adjustable Window Translucency *(Noticky inspired)*
+Working on UI design or copying code from a browser behind your note? Use the built-in Opacity Slider (40%–100%) to make your sticky notes translucent.
 
 ### 🗂️ Accordion Fold / Minimize *(SideNotes inspired)*
-Need a pinned sticky note on your screen without taking up space? Tap the fold arrow (`⌃`) to collapse the note into just a slender header bar. Click again to expand anytime.
+Tap the fold arrow (`⌃`) to collapse the note into just a slender header bar.
 
-### 💻 Monospaced Code Mode *(SideNotes inspired)*
-Working with shell commands, API endpoints, or code snippets? Toggle **Code Mode** (`</>`) to format the note in a clean monospaced typeface with 1-click code copying.
-
-### 📅 Smart NLP Date & Calendar Detection
-NotesMy scans your notes using native macOS linguistic data detectors. Mentioning *"Meeting tomorrow at 3:00 PM"* or *"Friday 10am"* automatically surfaces a 1-click **"Add to Calendar"** badge right inside the note.
-
-### ✅ Interactive Checklists & Markdown
-Type `- [ ] ` or tap the checkbox button in the toolbar to create checklists. Checkboxes are interactive both in the full editor and as interactive quick-toggles directly on the note deck!
-
-### 📌 Freely Pin to Desktop
-Want a reminder to stay permanently visible while coding or in a meeting? Click the **Pin** icon (`📌`) or drag the handle to peel the note off the edge and float it anywhere on your desktop.
-
-### 📤 Native macOS Sharing Sheet & Multi-Format Export *(Tot inspired)*
-Share notes directly to Mail, Messages, Apple Notes, or AirDrop using the native macOS Share Sheet (`NSSharingServicePicker`). Or batch export to Markdown (`.md`), Plain Text (`.txt`), or combined archives.
+### 💻 Monospaced Code Mode
+Toggle **Code Mode** (`</>`) to format the note in a clean monospaced typeface with 1-click code copying.
 
 ### 🎨 6 Curated Color Palettes
 - **Amber Yellow** (Classic warm sticky note)
@@ -148,6 +144,7 @@ Share notes directly to Mail, Messages, Apple Notes, or AirDrop using the native
 | `⌥⌘N` | Create a new sticky note |
 | `⌥⌘V` | **Quick Capture:** Create note from clipboard |
 | `⌥⌘L` | Open All Notes & Search Library |
+| `⌥⌘B` | Open 2D Sticky Board Canvas |
 | `⌥⌘A` | Open Archive |
 | `⌃⌥⌘H` | Toggle edge deck visibility |
 | `⌘[` / `⌘]` | Flip through previous / next note in place |
@@ -175,51 +172,7 @@ swift test
 ./package_dmg.sh
 
 # Open DMG
-open NotesMy-1.3.0.dmg
-```
-
----
-
-## 🏗️ Project Architecture
-
-```
-notesmy/
-├── Package.swift                    # Swift 6 SPM manifest
-├── package_dmg.sh                   # Universal DMG packaging & checksum script
-├── .github/workflows/
-│   └── release.yml                  # Automated CI/CD release & Homebrew tap sync
-├── Resources/
-│   └── Info.plist                   # LSUIElement accessory app configuration
-├── Sources/
-│   └── NotesMy/
-│       ├── App/
-│       │   ├── NotesMy.swift        # Main entrypoint
-│       │   └── AppDelegate.swift    # App lifecycle & global hotkey binding
-│       ├── Models/
-│       │   ├── NoteItem.swift       # Note model, categories, folding & opacity
-│       │   ├── NoteColor.swift      # 6 curated theme palettes & color extensions
-│       │   └── SmartDateDetector.swift # NLP date & calendar event detection
-│       ├── Services/
-│       │   ├── AppleNotesService.swift # Apple Notes & Reminders AppleScript bridge
-│       │   ├── SmartAIService.swift # Apple Intelligence & on-device NLP processing
-│       │   ├── NoteStore.swift      # Debounced auto-save, categories & clipboard hub
-│       │   ├── ClipboardService.swift # Instant clipboard capture service
-│       │   └── HotKeyManager.swift  # Zero-permission Carbon hotkey bridge
-│       ├── Views/
-│       │   ├── EdgeDeckView.swift   # Resting pill & fanned spring stack UI
-│       │   ├── NoteEditorView.swift # Editor with Apple Intelligence & Writing Tools
-│       │   ├── AllNotesWindowView.swift # Split-view library & category filters
-│       │   └── SettingsView.swift   # Preferences, docking & hotkey guide
-│       ├── Windows/
-│       │   ├── EdgeDeckWindowManager.swift  # Multi-display floating panel
-│       │   ├── NoteWindowManager.swift      # Movable sticky note panels
-│       │   ├── AllNotesWindowManager.swift  # Standard library window
-│       │   └── SettingsWindowManager.swift  # Preferences window
-│       └── MenuBar/
-│           └── MenuBarController.swift      # Status item & clipboard history menu
-└── Tests/
-    └── NotesMyTests/
-        └── NotesMyTests.swift       # Swift Testing suite (CRUD, AI, NLP, Colors)
+open NotesMy-1.4.0.dmg
 ```
 
 ---

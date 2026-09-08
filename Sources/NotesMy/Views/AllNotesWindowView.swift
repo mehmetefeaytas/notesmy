@@ -3,66 +3,102 @@ import AppKit
 
 public struct AllNotesWindowView: View {
     @ObservedObject var store = NoteStore.shared
+    @ObservedObject var loc = LocalizationService.shared
+
     @State private var searchText: String = ""
     @State private var selectedFilter: NoteFilter = .active
     @State private var selectedCategory: String = "All"
     @State private var selectedColorFilter: NoteColor? = nil
     @State private var selectedNoteId: UUID? = NoteStore.shared.activeNotes.first?.id
+    @State private var viewMode: ViewMode = .list
+    @State private var isSemanticSearchEnabled: Bool = false
+
+    public enum ViewMode: String, CaseIterable, Identifiable {
+        case list = "List View"
+        case board = "Sticky Board"
+        public var id: String { rawValue }
+    }
 
     public enum NoteFilter: String, CaseIterable, Identifiable {
         case active = "Active"
+        case favorites = "Favorites"
+        case pinned = "Pinned"
+        case checklists = "Tasks"
         case archived = "Archived"
         case all = "All"
+
         public var id: String { rawValue }
+
+        @MainActor
+        public func title(loc: LocalizationService) -> String {
+            switch self {
+            case .active: return loc.text(.filterActive)
+            case .favorites: return "⭐ \(loc.text(.favorites))"
+            case .pinned: return "📌 \(loc.text(.pinned))"
+            case .checklists: return "☑️ Checklist"
+            case .archived: return loc.text(.filterArchived)
+            case .all: return loc.text(.filterAll)
+            }
+        }
     }
 
     public init() {}
 
     private var filteredNotes: [NoteItem] {
-        var result = store.notes
+        var baseNotes = store.notes
 
         switch selectedFilter {
         case .active:
-            result = result.filter { !$0.isArchived }
+            baseNotes = baseNotes.filter { !$0.isArchived }
+        case .favorites:
+            baseNotes = baseNotes.filter { !$0.isArchived && $0.isFavorite }
+        case .pinned:
+            baseNotes = baseNotes.filter { !$0.isArchived && $0.isPinned }
+        case .checklists:
+            baseNotes = baseNotes.filter { !$0.isArchived && !$0.checklistItems.isEmpty }
         case .archived:
-            result = result.filter { $0.isArchived }
+            baseNotes = baseNotes.filter { $0.isArchived }
         case .all:
             break
         }
 
-        if selectedCategory != "All" {
-            result = result.filter { $0.category == selectedCategory }
-        }
+        var filters = SearchFilters()
+        filters.query = searchText
+        filters.category = selectedCategory
+        filters.color = selectedColorFilter
+        filters.isSemanticSearchEnabled = isSemanticSearchEnabled
 
-        if let color = selectedColorFilter {
-            result = result.filter { $0.color == color }
-        }
-
-        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            let query = searchText.lowercased()
-            result = result.filter {
-                $0.title.lowercased().contains(query) ||
-                $0.body.lowercased().contains(query)
-            }
-        }
-
-        return result.sorted(by: { $0.updatedAt > $1.updatedAt })
+        return SearchEngine.shared.search(notes: baseNotes, with: filters)
     }
 
     public var body: some View {
-        NavigationSplitView {
-            sidebarContent
-        } detail: {
-            detailContent
+        Group {
+            if viewMode == .board {
+                StickyBoardView()
+            } else {
+                NavigationSplitView {
+                    sidebarContent
+                } detail: {
+                    detailContent
+                }
+            }
         }
-        .frame(minWidth: 760, minHeight: 500)
+        .frame(minWidth: 800, minHeight: 540)
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Picker("View Mode", selection: $viewMode) {
+                    Label("List", systemImage: "list.bullet").tag(ViewMode.list)
+                    Label(loc.text(.stickyBoard), systemImage: "square.grid.3x3.fill").tag(ViewMode.board)
+                }
+                .pickerStyle(.segmented)
+            }
+
             ToolbarItemGroup(placement: .primaryAction) {
                 Button(action: {
                     let note = store.createNote(category: selectedCategory == "All" ? "General" : selectedCategory)
                     selectedNoteId = note.id
                 }) {
-                    Label("New Note", systemImage: "plus")
+                    Label(loc.text(.newNote), systemImage: "plus")
                 }
                 .help("Create Note (⌥⌘N)")
 
@@ -74,7 +110,7 @@ public struct AllNotesWindowView: View {
                         exportSingleDocument()
                     }
                     Divider()
-                    Button("Export to Apple Notes") {
+                    Button(loc.text(.sendToAppleNotes)) {
                         if let id = selectedNoteId, let note = store.notes.first(where: { $0.id == id }) {
                             AppleNotesService.shared.sendToAppleNotes(title: note.displayTitle, body: note.body)
                         }
@@ -90,12 +126,14 @@ public struct AllNotesWindowView: View {
 
     private var sidebarContent: some View {
         VStack(spacing: 8) {
-            // Search field
-            HStack {
+            // Search field with Semantic Search Toggle
+            HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                TextField("Search notes...", text: $searchText)
+
+                TextField(loc.text(.searchPlaceholder), text: $searchText)
                     .textFieldStyle(.plain)
+
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
@@ -103,6 +141,15 @@ public struct AllNotesWindowView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // Semantic Search Toggle Button
+                Button(action: { isSemanticSearchEnabled.toggle() }) {
+                    Image(systemName: isSemanticSearchEnabled ? "sparkles.rectangle.stack.fill" : "sparkles")
+                        .font(.system(size: 12))
+                        .foregroundColor(isSemanticSearchEnabled ? .purple : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Semantic Search (AI Concept & Synonym Search)")
             }
             .padding(7)
             .background(Color(nsColor: .controlBackgroundColor))
@@ -110,14 +157,36 @@ public struct AllNotesWindowView: View {
             .padding(.horizontal, 10)
             .padding(.top, 8)
 
-            // Segmented Filter (Active / Archived / All)
-            Picker("", selection: $selectedFilter) {
-                ForEach(NoteFilter.allCases) { filter in
-                    Text(filter.rawValue).tag(filter)
+            if isSemanticSearchEnabled {
+                HStack {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 9))
+                    Text("Semantic AI search active")
+                        .font(.system(size: 10, weight: .medium))
+                    Spacer()
                 }
+                .foregroundColor(.purple)
+                .padding(.horizontal, 12)
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 10)
+
+            // Segmented Filter Picker (Active, Favorites, Pinned, Tasks, Archived, All)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(NoteFilter.allCases) { filter in
+                        Button(action: { selectedFilter = filter }) {
+                            Text(filter.title(loc: loc))
+                                .font(.system(size: 11, weight: selectedFilter == filter ? .bold : .regular))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(selectedFilter == filter ? Color.accentColor.opacity(0.18) : Color.clear)
+                                .foregroundColor(selectedFilter == filter ? Color.accentColor : Color.secondary)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+            }
 
             // Categories Filter (SideNotes inspired)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -173,13 +242,27 @@ public struct AllNotesWindowView: View {
                 HStack(spacing: 10) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(note.color.dotColor)
-                        .frame(width: 4, height: 38)
+                        .frame(width: 4, height: 42)
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
                             Text(note.displayTitle)
                                 .font(.system(size: 12, weight: .semibold, design: note.isCodeMode ? .monospaced : .default))
                                 .lineLimit(1)
+
+                            Spacer()
+
+                            if note.isFavorite {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.yellow)
+                            }
+
+                            if note.isPinned {
+                                Image(systemName: "pin.fill")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(Color.accentColor)
+                            }
 
                             if note.isCodeMode {
                                 Image(systemName: "chevron.left.forwardslash.chevron.right")
@@ -201,12 +284,31 @@ public struct AllNotesWindowView: View {
                                 .background(Color.secondary.opacity(0.15))
                                 .cornerRadius(3)
 
+                            if let progress = note.checklistProgress {
+                                Text("\(progress.completed)/\(progress.total) ☑️")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            if let reminder = note.reminderDate {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "bell.fill")
+                                    Text(reminder.formatted(date: .omitted, time: .shortened))
+                                }
+                                .font(.system(size: 8, weight: .semibold))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.orange.opacity(0.15))
+                                .foregroundColor(.orange)
+                                .cornerRadius(3)
+                            }
+
                             Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
                                 .font(.system(size: 9))
                                 .foregroundColor(.secondary)
 
                             if note.isArchived {
-                                Text("Archived")
+                                Text(loc.text(.filterArchived))
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundColor(.orange)
                                     .padding(.horizontal, 4)
@@ -227,7 +329,7 @@ public struct AllNotesWindowView: View {
                         .font(.system(size: 11))
                         .lineLimit(1)
                     Spacer()
-                    Button("Undo") {
+                    Button(loc.text(.undo)) {
                         store.undoDelete()
                     }
                     .font(.system(size: 11, weight: .bold))
@@ -240,7 +342,7 @@ public struct AllNotesWindowView: View {
                 .padding(8)
             }
         }
-        .frame(minWidth: 280)
+        .frame(minWidth: 300)
     }
 
     private func categoryButton(title: String) -> some View {

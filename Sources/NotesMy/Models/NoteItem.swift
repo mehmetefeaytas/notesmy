@@ -37,11 +37,13 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
     public var tags: [String]
     public var attachments: [NoteAttachment]
 
-    // Advanced Features (SideNotes, Tot & Unclutter inspired)
+    // Advanced features
     public var category: String
     public var isFolded: Bool
     public var opacity: Double
     public var isCodeMode: Bool
+    public var isFavorite: Bool
+    public var reminderDate: Date?
 
     public init(
         id: UUID = UUID(),
@@ -59,7 +61,9 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         category: String = "General",
         isFolded: Bool = false,
         opacity: Double = 1.0,
-        isCodeMode: Bool = false
+        isCodeMode: Bool = false,
+        isFavorite: Bool = false,
+        reminderDate: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -77,6 +81,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isFolded = isFolded
         self.opacity = opacity
         self.isCodeMode = isCodeMode
+        self.isFavorite = isFavorite
+        self.reminderDate = reminderDate
     }
 
     public init(from decoder: Decoder) throws {
@@ -97,6 +103,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isFolded = try container.decodeIfPresent(Bool.self, forKey: .isFolded) ?? false
         self.opacity = try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1.0
         self.isCodeMode = try container.decodeIfPresent(Bool.self, forKey: .isCodeMode) ?? false
+        self.isFavorite = try container.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+        self.reminderDate = try container.decodeIfPresent(Date.self, forKey: .reminderDate)
     }
 
     public var displayTitle: String {

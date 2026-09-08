@@ -71,7 +71,27 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         allNotesItem.target = self
         menu.addItem(allNotesItem)
 
+        let boardItem = NSMenuItem(title: "Sticky Board Canvas...", action: #selector(handleAllNotes), keyEquivalent: "b")
+        boardItem.keyEquivalentModifierMask = [.option, .command]
+        boardItem.target = self
+        menu.addItem(boardItem)
+
         menu.addItem(NSMenuItem.separator())
+
+        // Favorites Submenu
+        let favorites = NoteStore.shared.favoriteNotes
+        if !favorites.isEmpty {
+            let favMenu = NSMenu()
+            for note in favorites.prefix(5) {
+                let item = NSMenuItem(title: "⭐ \(note.displayTitle)", action: #selector(handleOpenRecentNote(_:)), keyEquivalent: "")
+                item.representedObject = note.id
+                item.target = self
+                favMenu.addItem(item)
+            }
+            let favMenuItem = NSMenuItem(title: "Favorites", action: nil, keyEquivalent: "")
+            favMenuItem.submenu = favMenu
+            menu.addItem(favMenuItem)
+        }
 
         // Recents Submenu
         let recentsMenu = NSMenu()

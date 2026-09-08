@@ -44,6 +44,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             AllNotesWindowManager.shared.show()
         }
 
+        // ⌥⌘B -> Sticky Board (ANSI B = 11)
+        HotKeyManager.shared.registerHotKey(keyCode: 11, modifiers: optCmd) {
+            AllNotesWindowManager.shared.show()
+        }
+
         // ⌃⌥⌘H -> Toggle Deck (ANSI H = 4)
         HotKeyManager.shared.registerHotKey(keyCode: 4, modifiers: ctrlOptCmd) {
             EdgeDeckWindowManager.shared.toggleVisibility()

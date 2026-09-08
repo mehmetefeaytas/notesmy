@@ -14,8 +14,8 @@ struct NotesMyTests {
         #expect(!NoteColor.mint.backgroundHex.isEmpty)
     }
 
-    @Test("NoteItem display title and checklist extraction")
-    func testNoteItemChecklist() {
+    @Test("NoteItem display title, checklist and codable")
+    func testNoteItemChecklist() throws {
         let body = """
         This is a demo task list:
         - [ ] Buy oat milk
@@ -27,18 +27,29 @@ struct NotesMyTests {
             title: "",
             body: body,
             color: .amber,
-            category: "Work"
+            category: "Work",
+            isFavorite: true,
+            reminderDate: Date()
         )
 
         #expect(note.displayTitle == "This is a demo task list:")
         #expect(note.checklistItems.count == 3)
         #expect(note.checklistItems[0].isChecked == false)
         #expect(note.checklistItems[1].isChecked == true)
+        #expect(note.isFavorite == true)
+        #expect(note.reminderDate != nil)
 
         let progress = note.checklistProgress
         #expect(progress != nil)
         #expect(progress?.completed == 1)
         #expect(progress?.total == 3)
+
+        // Test JSON Codable Roundtrip
+        let data = try JSONEncoder().encode(note)
+        let decoded = try JSONDecoder().decode(NoteItem.self, from: data)
+        #expect(decoded.id == note.id)
+        #expect(decoded.isFavorite == true)
+        #expect(decoded.reminderDate != nil)
     }
 
     @Test("SmartDateDetector natural language detection")
@@ -78,12 +89,82 @@ struct NotesMyTests {
         #expect(!summary.isEmpty)
         #expect(summary.contains("Summary"))
 
+        // Test Turkish Smart Summary
+        let trSummary = SmartAIService.shared.smartSummary(text: "Bu uygulama macOS için geliştirilmiştir. Çok hızlı çalışır.", isTurkish: true)
+        #expect(!trSummary.isEmpty)
+        #expect(trSummary.contains("Yapay Zeka"))
+
+        // Test Messy Note Clean & Format
+        let messy = "yarın toplantı var saat 3te unutma faturaları öde bide kodları rebase et"
+        let cleaned = SmartAIService.shared.cleanAndFormatMessyNote(text: messy, isTurkish: true)
+        #expect(!cleaned.isEmpty)
+        #expect(cleaned.contains("Eylem Maddeleri") || cleaned.contains("Düzenlenmiş Not"))
+
         // Test Rewrite
         let bullets = SmartAIService.shared.rewrite(text: sampleText, style: .bulletPoints)
         #expect(bullets.contains("•"))
     }
 
-    @Test("Categories and advanced features (SideNotes & Tot inspired)")
+    @Test("LocalizationService TR and EN support")
+    @MainActor
+    func testLocalizationService() {
+        let loc = LocalizationService.shared
+
+        loc.language = .english
+        #expect(loc.text(.newNote) == "New Note")
+        #expect(loc.text(.stickyBoard) == "Sticky Board")
+
+        loc.language = .turkish
+        #expect(loc.text(.newNote) == "Yeni Not")
+        #expect(loc.text(.stickyBoard) == "Mantar Pano")
+    }
+
+    @Test("NoteAppearance typography and card sizes")
+    func testNoteAppearance() {
+        let fonts = FontFamilyOption.allCases
+        #expect(fonts.count >= 5)
+        #expect(fonts.contains(.rounded))
+        #expect(fonts.contains(.modern))
+        #expect(fonts.contains(.monospace))
+
+        let cards = CardSizeOption.allCases
+        #expect(cards.count >= 3)
+        let standardDim = CardSizeOption.standard.dimensions
+        #expect(standardDim.width > 300)
+        #expect(standardDim.height > 350)
+    }
+
+    @Test("SearchEngine lexical & semantic filtering")
+    func testSearchEngine() {
+        let note1 = NoteItem(title: "Meeting Notes", body: "Discuss Swift release timeline", category: "Work", isFavorite: true)
+        let note2 = NoteItem(title: "Grocery Shopping", body: "Milk, bread, eggs, cheese", category: "Personal", isFavorite: false)
+        let note3 = NoteItem(title: "Database Architecture", body: "Postgres schema migrations", category: "Code", isFavorite: true)
+
+        let allNotes = [note1, note2, note3]
+
+        // Exact match
+        var filters = SearchFilters()
+        filters.query = "timeline"
+        var results = SearchEngine.shared.search(notes: allNotes, with: filters)
+        #expect(results.count == 1)
+        #expect(results.first?.id == note1.id)
+
+        // Category filter
+        filters = SearchFilters()
+        filters.category = "Code"
+        results = SearchEngine.shared.search(notes: allNotes, with: filters)
+        #expect(results.count == 1)
+        #expect(results.first?.id == note3.id)
+
+        // Semantic / conceptual search
+        filters = SearchFilters()
+        filters.query = "food supper"
+        filters.isSemanticSearchEnabled = true
+        results = SearchEngine.shared.search(notes: allNotes, with: filters)
+        #expect(!results.isEmpty)
+    }
+
+    @Test("Categories, Fold and Favorites (SideNotes & Tot inspired)")
     @MainActor
     func testAdvancedFeatures() {
         let store = NoteStore()
@@ -107,6 +188,10 @@ struct NotesMyTests {
         store.toggleFold(noteId: devNote.id)
         let folded = store.notes.first(where: { $0.id == devNote.id })
         #expect(folded?.isFolded == true)
+
+        // Test Favorite Toggle
+        store.toggleFavorite(noteId: devNote.id)
+        #expect(store.favoriteNotes.contains(where: { $0.id == devNote.id }))
     }
 
     @Test("NoteStore CRUD operations")
@@ -126,6 +211,10 @@ struct NotesMyTests {
 
         let updated = store.notes.first(where: { $0.id == noteWithChecklist.id })
         #expect(updated?.body.contains("- [x] Step 1") == true)
+
+        // Test Pin Toggle
+        store.togglePin(noteId: newNote.id)
+        #expect(store.pinnedNotes.contains(where: { $0.id == newNote.id }))
 
         // Test Archive
         store.archiveNote(id: newNote.id)

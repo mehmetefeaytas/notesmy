@@ -12,13 +12,20 @@ public struct NoteEditorView: View {
     @State private var localCategory: String = "General"
     @State private var isPinned: Bool = false
     @State private var isFolded: Bool = false
+    @ObservedObject var loc = LocalizationService.shared
+    @ObservedObject var audioService = AudioRecordingService.shared
     @State private var opacity: Double = 1.0
     @State private var isCodeMode: Bool = false
+    @State private var isFavorite: Bool = false
     @State private var detectedDates: [SmartDateInfo] = []
     @State private var isDragTargetActive: Bool = false
     @State private var showDeleteConfirm: Bool = false
     @State private var copiedFeedback: Bool = false
     @State private var showOpacityPopover: Bool = false
+    @State private var showReminderPopover: Bool = false
+    @State private var reminderDate: Date = Date().addingTimeInterval(3600)
+    @State private var isRecordingVoice: Bool = false
+    @State private var isPerformingOCR: Bool = false
     @State private var aiStatusMessage: String? = nil
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
@@ -36,6 +43,10 @@ public struct NoteEditorView: View {
             headerBar
 
             if !isFolded {
+                if isRecordingVoice {
+                    voiceRecordingBanner
+                }
+
                 if !detectedDates.isEmpty {
                     smartDateBanner
                 }
@@ -55,9 +66,9 @@ public struct NoteEditorView: View {
         }
         .frame(
             minWidth: 340,
-            idealWidth: 380,
-            minHeight: isFolded ? 46 : 360,
-            idealHeight: isFolded ? 46 : 420
+            idealWidth: store.cardSize.dimensions.width,
+            minHeight: isFolded ? 46 : 340,
+            idealHeight: isFolded ? 46 : store.cardSize.dimensions.height
         )
         .background(
             localColor.primaryColor
@@ -149,6 +160,24 @@ public struct NoteEditorView: View {
             }
             .menuStyle(.borderlessButton)
 
+            // Favorite Toggle
+            Button(action: toggleFavorite) {
+                Image(systemName: isFavorite ? "star.fill" : "star")
+                    .font(.system(size: 11))
+                    .foregroundColor(isFavorite ? .yellow : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(isFavorite ? "Remove from Favorites" : "Add to Favorites")
+
+            // Voice Note Record Button
+            Button(action: toggleVoiceRecording) {
+                Image(systemName: isRecordingVoice ? "stop.circle.fill" : "mic")
+                    .font(.system(size: 11))
+                    .foregroundColor(isRecordingVoice ? .red : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(isRecordingVoice ? loc.text(.speechStop) : loc.text(.speechRecord))
+
             // Apple Intelligence Sparkles Menu
             aiToolsMenu
 
@@ -181,27 +210,33 @@ public struct NoteEditorView: View {
         Menu {
             Section("Apple Intelligence") {
                 Button {
+                    applyAICleanMessyNote()
+                } label: {
+                    Label(loc.text(.cleanMessyNote), systemImage: "wand.and.stars")
+                }
+
+                Button {
                     applyAISummarize()
                 } label: {
-                    Label("Summarize Note", systemImage: "sparkles")
+                    Label(loc.text(.summarize), systemImage: "sparkles")
                 }
 
                 Button {
                     applyAITasks()
                 } label: {
-                    Label("Extract Action Items", systemImage: "checklist")
+                    Label(loc.text(.extractTasks), systemImage: "checklist")
                 }
 
                 Button {
                     applyAITitle()
                 } label: {
-                    Label("Suggest Smart Title", systemImage: "character.textbox")
+                    Label(loc.text(.smartTitle), systemImage: "character.textbox")
                 }
 
                 Button {
                     applyAICategory()
                 } label: {
-                    Label("Auto-Categorize Note", systemImage: "folder.badge.gearshape")
+                    Label(loc.text(.autoCategorize), systemImage: "folder.badge.gearshape")
                 }
             }
 
@@ -313,6 +348,77 @@ public struct NoteEditorView: View {
         .padding(.bottom, 4)
     }
 
+    private var voiceRecordingBanner: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color.red)
+                .frame(width: 8, height: 8)
+
+            Text(audioService.liveTranscript.isEmpty ? loc.text(.speechRecording) : audioService.liveTranscript)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundColor(.red)
+                .lineLimit(2)
+
+            Spacer()
+
+            Button(action: toggleVoiceRecording) {
+                Text(loc.text(.speechStop))
+                    .font(.system(size: 10, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.red.opacity(0.15))
+                    .foregroundColor(.red)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.red.opacity(0.08))
+        .cornerRadius(6)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+    }
+
+    private var reminderPopoverContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(loc.text(.addReminder))
+                .font(.system(size: 12, weight: .bold))
+
+            DatePicker(
+                "Alert Date",
+                selection: $reminderDate,
+                in: Date()...,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.compact)
+            .labelsHidden()
+
+            HStack {
+                if currentNote?.reminderDate != nil {
+                    Button("Remove") {
+                        store.setReminder(noteId: noteId, date: nil)
+                        showReminderPopover = false
+                    }
+                    .font(.system(size: 11))
+                    .foregroundColor(.red)
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+
+                Button("Set Reminder") {
+                    store.setReminder(noteId: noteId, date: reminderDate)
+                    showReminderPopover = false
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(12)
+        .frame(width: 220)
+    }
+
     // MARK: - Checklist Preview Strip
 
     private func checklistPreviewStrip(items: [ChecklistItem]) -> some View {
@@ -351,11 +457,19 @@ public struct NoteEditorView: View {
 
     // MARK: - Main Editor
 
+    private var editorFont: Font {
+        if isCodeMode {
+            return .system(size: store.fontSize, design: .monospaced)
+        } else {
+            return store.selectedFont.font(size: store.fontSize)
+        }
+    }
+
     @ViewBuilder
     private var editorArea: some View {
         if #available(macOS 15.0, *) {
             TextEditor(text: $localBody)
-                .font(.system(size: 13, design: isCodeMode ? .monospaced : .rounded))
+                .font(editorFont)
                 .foregroundColor(localColor.textColor)
                 .scrollContentBackground(.hidden)
                 .padding(.horizontal, 10)
@@ -363,7 +477,7 @@ public struct NoteEditorView: View {
                 .writingToolsBehavior(.complete)
         } else {
             TextEditor(text: $localBody)
-                .font(.system(size: 13, design: isCodeMode ? .monospaced : .rounded))
+                .font(editorFont)
                 .foregroundColor(localColor.textColor)
                 .scrollContentBackground(.hidden)
                 .padding(.horizontal, 10)
@@ -400,6 +514,38 @@ public struct NoteEditorView: View {
             }
             .buttonStyle(.plain)
             .help("Next Note (⌘])")
+
+            Divider().frame(height: 10)
+
+            // Direct Screenshot Capture
+            Button(action: captureScreenshot) {
+                Image(systemName: "camera")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(loc.text(.captureScreen))
+
+            // OCR Image Text Recognition
+            Button(action: extractOCRFromAttachmentsOrFile) {
+                Image(systemName: "text.viewfinder")
+                    .font(.system(size: 11))
+                    .foregroundColor(isPerformingOCR ? Color.accentColor : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(loc.text(.ocrExtract))
+
+            // Reminder Popover Button
+            Button(action: { showReminderPopover.toggle() }) {
+                Image(systemName: currentNote?.reminderDate != nil ? "bell.fill" : "bell")
+                    .font(.system(size: 11))
+                    .foregroundColor(currentNote?.reminderDate != nil ? .orange : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showReminderPopover) {
+                reminderPopoverContent
+            }
+            .help(loc.text(.addReminder))
 
             Divider().frame(height: 10)
 
@@ -521,11 +667,30 @@ public struct NoteEditorView: View {
 
     // MARK: - Apple Intelligence Actions
 
-    private func applyAISummarize() {
-        let summary = SmartAIService.shared.summarize(text: localBody)
+    private func applyAICleanMessyNote() {
+        let isTurkish = (loc.language == .turkish)
+        let cleaned = SmartAIService.shared.cleanAndFormatMessyNote(text: localBody, isTurkish: isTurkish)
+        if !cleaned.isEmpty {
+            localBody = cleaned
+            aiStatusMessage = isTurkish ? "Dağınık not düzenlendi & biçimlendirildi ✨" : "Messy note organized & structured ✨"
+        }
+    }
+
+    private func applyAISmartSummary() {
+        let isTurkish = (loc.language == .turkish)
+        let summary = SmartAIService.shared.smartSummary(text: localBody, isTurkish: isTurkish)
         if !summary.isEmpty {
             localBody = "\(summary)\n\n---\n\n\(localBody)"
-            aiStatusMessage = "AI Summary added to top of note"
+            aiStatusMessage = isTurkish ? "Akıllı özet nota eklendi" : "Smart summary added to note"
+        }
+    }
+
+    private func applyAISummarize() {
+        let isTurkish = (loc.language == .turkish)
+        let summary = SmartAIService.shared.smartSummary(text: localBody, isTurkish: isTurkish)
+        if !summary.isEmpty {
+            localBody = "\(summary)\n\n---\n\n\(localBody)"
+            aiStatusMessage = isTurkish ? "AI Özeti nota eklendi" : "AI Summary added to top of note"
         }
     }
 
@@ -562,6 +727,95 @@ public struct NoteEditorView: View {
         }
     }
 
+    // MARK: - Media & Hardware Actions
+
+    private func captureScreenshot() {
+        Task {
+            if let screenshotURL = await ScreenshotService.shared.captureInteractiveScreenshot(noteId: noteId) {
+                let attachmentName = screenshotURL.lastPathComponent
+                if localBody.isEmpty {
+                    localBody = "![\(attachmentName)](\(attachmentName))"
+                } else {
+                    localBody += "\n\n![\(attachmentName)](\(attachmentName))\n"
+                }
+                aiStatusMessage = "Screenshot attached to note"
+            }
+        }
+    }
+
+    private func extractOCRFromAttachmentsOrFile() {
+        isPerformingOCR = true
+        Task {
+            var extractedTexts: [String] = []
+            let attachDir = store.attachmentsDirectory
+
+            let pattern = "!\\[.*?\\]\\((.*?)\\)"
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let nsString = localBody as NSString
+                let matches = regex.matches(in: localBody, range: NSRange(location: 0, length: nsString.length))
+                for match in matches {
+                    if match.numberOfRanges > 1 {
+                        let path = nsString.substring(with: match.range(at: 1))
+                        let fullURL = attachDir.appendingPathComponent(path)
+                        if FileManager.default.fileExists(atPath: fullURL.path) {
+                            let text = await OCRService.shared.extractText(from: fullURL)
+                            if !text.isEmpty {
+                                extractedTexts.append(text)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if extractedTexts.isEmpty {
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = true
+                panel.canChooseDirectories = false
+                panel.allowsMultipleSelection = false
+                panel.prompt = "Select Image for OCR"
+                if panel.runModal() == .OK, let fileURL = panel.url {
+                    let text = await OCRService.shared.extractText(from: fileURL)
+                    if !text.isEmpty {
+                        extractedTexts.append(text)
+                    }
+                }
+            }
+
+            isPerformingOCR = false
+            if !extractedTexts.isEmpty {
+                let combined = extractedTexts.joined(separator: "\n\n")
+                localBody += "\n\n### 📝 OCR Text:\n\(combined)\n"
+                aiStatusMessage = "Extracted text via Apple Vision OCR"
+            } else {
+                aiStatusMessage = "No text detected or no image found"
+            }
+        }
+    }
+
+    private func toggleVoiceRecording() {
+        if audioService.isRecording {
+            audioService.stopRecording()
+            isRecordingVoice = false
+            if !audioService.liveTranscript.isEmpty {
+                if localBody.isEmpty {
+                    localBody = audioService.liveTranscript
+                } else {
+                    localBody += "\n\n🎙️ \(audioService.liveTranscript)"
+                }
+                aiStatusMessage = "Voice transcription appended"
+            }
+        } else {
+            isRecordingVoice = true
+            let isTurkish = (loc.language == .turkish)
+            audioService.startRecording(isTurkish: isTurkish) { _ in }
+        }
+    }
+
+    private func toggleFavorite() {
+        isFavorite.toggle()
+        store.toggleFavorite(noteId: noteId)
+    }
+
     // MARK: - Actions & Helpers
 
     private func loadNoteData() {
@@ -574,6 +828,10 @@ public struct NoteEditorView: View {
         self.isFolded = note.isFolded
         self.opacity = note.opacity
         self.isCodeMode = note.isCodeMode
+        self.isFavorite = note.isFavorite
+        if let rem = note.reminderDate {
+            self.reminderDate = rem
+        }
         updateSmartDates()
     }
 
@@ -587,6 +845,7 @@ public struct NoteEditorView: View {
         note.isFolded = isFolded
         note.opacity = opacity
         note.isCodeMode = isCodeMode
+        note.isFavorite = isFavorite
         store.updateNote(note)
     }
 
