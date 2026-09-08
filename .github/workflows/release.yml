@@ -41,7 +41,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app
 
       - name: Cache Swift Build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .build
           key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift', 'Package.resolved') }}
@@ -108,7 +108,7 @@ jobs:
 
       # ── 6. Restore SPM cache ─────────────────────────────────
       - name: Cache Swift Build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .build
           key: ${{ runner.os }}-spm-release-${{ hashFiles('Package.swift') }}
