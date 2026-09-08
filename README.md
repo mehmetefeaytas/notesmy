@@ -42,6 +42,10 @@ Traditional sticky notes clutter your workspace, get buried under app windows, a
             opacity slider, natural language date detection, code mode, and desktop pin.
 ```
 
+<p align="center">
+  <img src="assets/preview-allnotes.png" width="700" alt="NotesMy All Notes Window & Live Editor" />
+</p>
+
 ---
 
 ## 🧠 Apple Intelligence & On-Device AI Features
