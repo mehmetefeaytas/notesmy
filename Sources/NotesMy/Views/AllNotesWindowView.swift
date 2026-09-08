@@ -276,91 +276,40 @@ public struct AllNotesWindowView: View {
 
             Divider()
 
-            // Notes List
-            List(filteredNotes, selection: $selectedNoteId) { note in
-                HStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(note.color.dotColor)
-                        .frame(width: 4, height: 42)
+            // Header showing count of notes
+            HStack {
+                Text("\(filteredNotes.count) \(loc.text(.allNotes).lowercased())")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 2)
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text(note.displayTitle)
-                                .font(.system(size: 12, weight: .semibold, design: note.isCodeMode ? .monospaced : .default))
-                                .lineLimit(1)
-
-                            Spacer()
-
-                            if note.isFavorite {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.yellow)
-                            }
-
-                            if note.isPinned {
-                                Image(systemName: "pin.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(Color.accentColor)
-                            }
-
-                            if note.isCodeMode {
-                                Image(systemName: "chevron.left.forwardslash.chevron.right")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        Text(note.previewSnippet)
-                            .font(.system(size: 11))
+            // Scrollable Notes List
+            ScrollView(.vertical, showsIndicators: true) {
+                if filteredNotes.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 28))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("No notes found")
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                            .lineLimit(1)
-
-                        HStack(spacing: 6) {
-                            Text(loc.localizedCategory(note.category))
-                                .font(.system(size: 9, weight: .medium))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Color.secondary.opacity(0.15))
-                                .cornerRadius(3)
-
-                            if let progress = note.checklistProgress {
-                                Text("\(progress.completed)/\(progress.total) ☑️")
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundColor(.secondary)
-                            }
-
-                            if let reminder = note.reminderDate {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "bell.fill")
-                                    Text(reminder.formatted(date: .omitted, time: .shortened))
-                                }
-                                .font(.system(size: 8, weight: .semibold))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Color.orange.opacity(0.15))
-                                .foregroundColor(.orange)
-                                .cornerRadius(3)
-                            }
-
-                            Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(size: 9))
-                                .foregroundColor(.secondary)
-
-                            if note.isArchived {
-                                Text(loc.text(.filterArchived))
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(.orange)
-                                    .padding(.horizontal, 4)
-                                    .background(Color.orange.opacity(0.12))
-                                    .cornerRadius(3)
-                            }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 160)
+                    .padding(.top, 40)
+                } else {
+                    LazyVStack(spacing: 6) {
+                        ForEach(filteredNotes) { note in
+                            noteCardRow(note: note)
                         }
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                 }
-                .tag(note.id)
             }
-            .listStyle(.sidebar)
-            .frame(minHeight: 250, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Undo banner if item deleted
             if let deleted = store.recentlyDeletedNote {
@@ -382,7 +331,129 @@ public struct AllNotesWindowView: View {
                 .padding(8)
             }
         }
-        .frame(minWidth: 300)
+        .frame(minWidth: 300, maxHeight: .infinity)
+    }
+
+    private func noteCardRow(note: NoteItem) -> some View {
+        let isSelected = selectedNoteId == note.id
+        return Button(action: {
+            selectedNoteId = note.id
+        }) {
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(note.color.dotColor)
+                    .frame(width: 4, height: 42)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(note.displayTitle)
+                            .font(.system(size: 12, weight: .semibold, design: note.isCodeMode ? .monospaced : .default))
+                            .foregroundColor(isSelected ? .white : .primary)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        if note.isFavorite {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9))
+                                .foregroundColor(.yellow)
+                        }
+
+                        if note.isPinned {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 9))
+                                .foregroundColor(isSelected ? .white : Color.accentColor)
+                        }
+
+                        if note.isCodeMode {
+                            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                .font(.system(size: 9))
+                                .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                        }
+                    }
+
+                    Text(note.previewSnippet)
+                        .font(.system(size: 11))
+                        .foregroundColor(isSelected ? .white.opacity(0.85) : .secondary)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        Text(loc.localizedCategory(note.category))
+                            .font(.system(size: 9, weight: .medium))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(isSelected ? Color.white.opacity(0.2) : Color.secondary.opacity(0.15))
+                            .foregroundColor(isSelected ? .white : .primary)
+                            .cornerRadius(3)
+
+                        if let progress = note.checklistProgress {
+                            Text("\(progress.completed)/\(progress.total) ☑️")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(isSelected ? .white.opacity(0.85) : .secondary)
+                        }
+
+                        if let reminder = note.reminderDate {
+                            HStack(spacing: 2) {
+                                Image(systemName: "bell.fill")
+                                Text(reminder.formatted(date: .omitted, time: .shortened))
+                            }
+                            .font(.system(size: 8, weight: .semibold))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.orange.opacity(0.25))
+                            .foregroundColor(.orange)
+                            .cornerRadius(3)
+                        }
+
+                        Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.system(size: 9))
+                            .foregroundColor(isSelected ? .white.opacity(0.75) : .secondary)
+
+                        if note.isArchived {
+                            Text(loc.text(.filterArchived))
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 4)
+                                .background(Color.orange.opacity(0.2))
+                                .cornerRadius(3)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? Color.accentColor : Color(nsColor: .controlBackgroundColor).opacity(0.65))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.clear : Color.primary.opacity(0.06), lineWidth: 0.5)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(note.isFavorite ? "Unfavorite" : "Favorite") {
+                store.toggleFavorite(noteId: note.id)
+            }
+            Button(note.isPinned ? "Unpin" : "Pin") {
+                store.togglePin(noteId: note.id)
+            }
+            Button(note.isArchived ? "Unarchive" : "Archive") {
+                if note.isArchived {
+                    store.unarchiveNote(id: note.id)
+                } else {
+                    store.archiveNote(id: note.id)
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                store.deleteNote(id: note.id)
+            } label: {
+                Text(loc.language == .turkish ? "Sil" : "Delete")
+            }
+        }
     }
 
     private func categoryButton(title: String) -> some View {

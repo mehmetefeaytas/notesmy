@@ -2,6 +2,85 @@ import Foundation
 import SwiftUI
 import Combine
 import AppKit
+import Carbon
+
+public enum HotKeyAction: String, CaseIterable, Identifiable, Codable, Sendable {
+    case newNote = "newNote"
+    case quickCapture = "quickCapture"
+    case allNotes = "allNotes"
+    case stickyBoard = "stickyBoard"
+    case archive = "archive"
+    case toggleDeck = "toggleDeck"
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func title(loc: LocalizationService) -> String {
+        switch self {
+        case .newNote:
+            return loc.language == .turkish ? "Yeni Not Oluştur" : loc.text(.newNote)
+        case .quickCapture:
+            return loc.language == .turkish ? "Panodan Not Yakala" : loc.text(.quickCapture)
+        case .allNotes:
+            return loc.language == .turkish ? "Tüm Notlar & Arama" : loc.text(.allNotes)
+        case .stickyBoard:
+            return loc.language == .turkish ? "Yapışkan Not Panosu" : loc.text(.stickyBoard)
+        case .archive:
+            return loc.language == .turkish ? "Arşivlenen Notlar" : loc.text(.archive)
+        case .toggleDeck:
+            return loc.language == .turkish ? "Kenar Çubuğunu Göster / Gizle" : "Toggle Edge Deck"
+        }
+    }
+
+    public var defaultKeyCode: UInt32 {
+        switch self {
+        case .newNote: return 45   // ANSI N
+        case .quickCapture: return 9 // ANSI V
+        case .allNotes: return 37   // ANSI L
+        case .stickyBoard: return 11 // ANSI B
+        case .archive: return 0     // ANSI A
+        case .toggleDeck: return 4  // ANSI H
+        }
+    }
+
+    public var defaultModifiers: UInt32 {
+        switch self {
+        case .toggleDeck:
+            return UInt32(cmdKey | optionKey | controlKey)
+        default:
+            return UInt32(cmdKey | optionKey)
+        }
+    }
+
+    public var defaultDisplayString: String {
+        switch self {
+        case .toggleDeck:
+            return "⌃⌥⌘H"
+        case .newNote:
+            return "⌥⌘N"
+        case .quickCapture:
+            return "⌥⌘V"
+        case .allNotes:
+            return "⌥⌘L"
+        case .stickyBoard:
+            return "⌥⌘B"
+        case .archive:
+            return "⌥⌘A"
+        }
+    }
+}
+
+public struct SavedHotKey: Codable, Equatable, Sendable {
+    public var keyCode: UInt32
+    public var modifiers: UInt32
+    public var displayString: String
+
+    public init(keyCode: UInt32, modifiers: UInt32, displayString: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.displayString = displayString
+    }
+}
 
 public enum DockSide: String, Codable, CaseIterable, Identifiable, Sendable {
     case right = "Right Edge"
@@ -9,6 +88,14 @@ public enum DockSide: String, Codable, CaseIterable, Identifiable, Sendable {
     case bottom = "Bottom Edge"
 
     public var id: String { rawValue }
+
+    public func title(language: AppLanguage) -> String {
+        switch self {
+        case .right: return language == .turkish ? "Sağ Kenar" : "Right Edge"
+        case .left:  return language == .turkish ? "Sol Kenar" : "Left Edge"
+        case .bottom: return language == .turkish ? "Alt Kenar" : "Bottom Edge"
+        }
+    }
 }
 
 @MainActor
@@ -29,6 +116,7 @@ public final class NoteStore: ObservableObject {
     @Published public var fontSize: CGFloat = 13
     @Published public var cardSize: CardSizeOption = .standard
     @Published public var hotkeyModifier: HotKeyModifierOption = .optionCommand
+    @Published public var customHotKeys: [String: SavedHotKey] = [:]
 
     // Categories & Collections (SideNotes feature)
     @Published public var categories: [String] = ["General", "Work", "Personal", "Code", "Ideas"]
@@ -442,6 +530,29 @@ public final class NoteStore: ObservableObject {
         }
     }
 
+    // MARK: - HotKey Settings Helpers
+
+    public func hotKey(for action: HotKeyAction) -> SavedHotKey {
+        if let custom = customHotKeys[action.rawValue] {
+            return custom
+        }
+        return SavedHotKey(
+            keyCode: action.defaultKeyCode,
+            modifiers: action.defaultModifiers,
+            displayString: action.defaultDisplayString
+        )
+    }
+
+    public func setHotKey(action: HotKeyAction, keyCode: UInt32, modifiers: UInt32, displayString: String) {
+        customHotKeys[action.rawValue] = SavedHotKey(keyCode: keyCode, modifiers: modifiers, displayString: displayString)
+        saveSettings()
+    }
+
+    public func resetHotKeysToDefaults() {
+        customHotKeys.removeAll()
+        saveSettings()
+    }
+
     public func saveSettings() {
         struct Settings: Codable {
             var dockSide: DockSide
@@ -452,6 +563,7 @@ public final class NoteStore: ObservableObject {
             var fontSize: CGFloat?
             var cardSize: CardSizeOption?
             var hotkeyModifier: HotKeyModifierOption?
+            var customHotKeys: [String: SavedHotKey]?
         }
         let settings = Settings(
             dockSide: dockSide,
@@ -461,7 +573,8 @@ public final class NoteStore: ObservableObject {
             selectedFont: selectedFont,
             fontSize: fontSize,
             cardSize: cardSize,
-            hotkeyModifier: hotkeyModifier
+            hotkeyModifier: hotkeyModifier,
+            customHotKeys: customHotKeys
         )
         if let data = try? JSONEncoder().encode(settings) {
             try? data.write(to: settingsFileURL, options: .atomic)
@@ -480,6 +593,7 @@ public final class NoteStore: ObservableObject {
             var fontSize: CGFloat?
             var cardSize: CardSizeOption?
             var hotkeyModifier: HotKeyModifierOption?
+            var customHotKeys: [String: SavedHotKey]?
         }
         if let settings = try? JSONDecoder().decode(Settings.self, from: data) {
             self.dockSide = settings.dockSide
@@ -499,6 +613,9 @@ public final class NoteStore: ObservableObject {
             }
             if let mod = settings.hotkeyModifier {
                 self.hotkeyModifier = mod
+            }
+            if let hks = settings.customHotKeys {
+                self.customHotKeys = hks
             }
         }
     }

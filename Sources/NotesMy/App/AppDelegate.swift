@@ -48,39 +48,44 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func setupGlobalHotkeys() {
         HotKeyManager.shared.unregisterAll()
 
-        let mod = NoteStore.shared.hotkeyModifier.carbonModifier
-        let ctrlOptCmd: UInt32 = UInt32(cmdKey | optionKey | controlKey)
+        let store = NoteStore.shared
 
-        // New Note (ANSI N = 45)
-        HotKeyManager.shared.registerHotKey(keyCode: 45, modifiers: mod) {
+        // New Note
+        let newNoteKey = store.hotKey(for: .newNote)
+        HotKeyManager.shared.registerHotKey(keyCode: newNoteKey.keyCode, modifiers: newNoteKey.modifiers) {
             let note = NoteStore.shared.createNote()
             NoteWindowManager.shared.openNote(id: note.id)
         }
 
-        // Quick Capture from Clipboard (ANSI V = 9)
-        HotKeyManager.shared.registerHotKey(keyCode: 9, modifiers: mod) {
+        // Quick Capture from Clipboard
+        let quickCaptureKey = store.hotKey(for: .quickCapture)
+        HotKeyManager.shared.registerHotKey(keyCode: quickCaptureKey.keyCode, modifiers: quickCaptureKey.modifiers) {
             if let note = ClipboardService.shared.captureToNewNote() {
                 NoteWindowManager.shared.openNote(id: note.id)
             }
         }
 
-        // All Notes & Search (ANSI L = 37)
-        HotKeyManager.shared.registerHotKey(keyCode: 37, modifiers: mod) {
+        // All Notes & Search
+        let allNotesKey = store.hotKey(for: .allNotes)
+        HotKeyManager.shared.registerHotKey(keyCode: allNotesKey.keyCode, modifiers: allNotesKey.modifiers) {
             AllNotesWindowManager.shared.show()
         }
 
-        // Archive (ANSI A = 0)
-        HotKeyManager.shared.registerHotKey(keyCode: 0, modifiers: mod) {
+        // Archive
+        let archiveKey = store.hotKey(for: .archive)
+        HotKeyManager.shared.registerHotKey(keyCode: archiveKey.keyCode, modifiers: archiveKey.modifiers) {
             AllNotesWindowManager.shared.show()
         }
 
-        // Sticky Board (ANSI B = 11)
-        HotKeyManager.shared.registerHotKey(keyCode: 11, modifiers: mod) {
+        // Sticky Board
+        let stickyBoardKey = store.hotKey(for: .stickyBoard)
+        HotKeyManager.shared.registerHotKey(keyCode: stickyBoardKey.keyCode, modifiers: stickyBoardKey.modifiers) {
             AllNotesWindowManager.shared.show()
         }
 
-        // Toggle Deck (ANSI H = 4)
-        HotKeyManager.shared.registerHotKey(keyCode: 4, modifiers: ctrlOptCmd) {
+        // Toggle Deck
+        let toggleDeckKey = store.hotKey(for: .toggleDeck)
+        HotKeyManager.shared.registerHotKey(keyCode: toggleDeckKey.keyCode, modifiers: toggleDeckKey.modifiers) {
             EdgeDeckWindowManager.shared.toggleVisibility()
         }
     }

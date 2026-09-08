@@ -2,7 +2,7 @@
 set -e
 
 APP_NAME="NotesMy"
-VERSION="1.6.0"
+VERSION="1.6.1"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 APP_BUNDLE="${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"

@@ -143,8 +143,8 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
         guard let screen = activeScreen ?? NSScreen.main, let panel = deckPanel else { return }
         let screenFrame = screen.visibleFrame
 
-        let width: CGFloat = isExpanded ? 260 : 18
-        let height: CGFloat = isExpanded ? 400 : 220
+        let width: CGFloat = isExpanded ? 275 : 18
+        let height: CGFloat = isExpanded ? min(screenFrame.height * 0.85, 580) : 220
 
         var x: CGFloat = 0
         var y: CGFloat = screenFrame.midY - (height / 2)

@@ -103,28 +103,23 @@ public struct EdgeDeckView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // Deck Card Stack
-            VStack(alignment: .trailing, spacing: 6) {
-                ForEach(Array(displayedNotes.prefix(6).enumerated()), id: \.element.id) { index, note in
-                    deckCard(note: note, index: index)
-                }
+            // Deck Card Stack (Scrollable through all notes)
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .trailing, spacing: 6) {
+                    ForEach(Array(displayedNotes.enumerated()), id: \.element.id) { index, note in
+                        deckCard(note: note, index: index)
+                    }
 
-                if displayedNotes.isEmpty {
-                    Text("No notes in \(loc.localizedCategory(store.selectedCategory))")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .padding(8)
+                    if displayedNotes.isEmpty {
+                        Text("No notes in \(loc.localizedCategory(store.selectedCategory))")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .padding(8)
+                    }
                 }
-
-                if displayedNotes.count > 6 {
-                    Text("+\(displayedNotes.count - 6) \(loc.text(.allNotes))")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.black.opacity(0.06)))
-                }
+                .padding(.vertical, 2)
             }
+            .frame(maxHeight: 460)
 
             // Quick Control Bar
             HStack(spacing: 6) {
