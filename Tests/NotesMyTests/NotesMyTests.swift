@@ -51,6 +51,38 @@ struct NotesMyTests {
         #expect(!detected.first!.formattedDescription.isEmpty)
     }
 
+    @Test("Apple Intelligence SmartAIService capabilities")
+    func testAppleIntelligenceService() {
+        let sampleText = """
+        We need to deploy the new macOS application by Friday.
+        Remember to update the changelog on GitHub.
+        Review the pull requests and run unit tests.
+        """
+
+        // Test Action Items Extraction
+        let tasks = SmartAIService.shared.extractActionItems(from: sampleText)
+        #expect(!tasks.isEmpty)
+        #expect(tasks.contains(where: { $0.lowercased().contains("deploy") || $0.lowercased().contains("changelog") || $0.lowercased().contains("review") }))
+
+        // Test Smart Title Generation
+        let title = SmartAIService.shared.generateSmartTitle(for: sampleText)
+        #expect(!title.isEmpty)
+
+        // Test Category Prediction
+        let codeSnippet = "func processNotes() { let x = 10; return x }"
+        let predictedCat = SmartAIService.shared.predictCategory(for: codeSnippet)
+        #expect(predictedCat == "Code")
+
+        // Test Summary Generation
+        let summary = SmartAIService.shared.summarize(text: sampleText)
+        #expect(!summary.isEmpty)
+        #expect(summary.contains("Summary"))
+
+        // Test Rewrite
+        let bullets = SmartAIService.shared.rewrite(text: sampleText, style: .bulletPoints)
+        #expect(bullets.contains("•"))
+    }
+
     @Test("Categories and advanced features (SideNotes & Tot inspired)")
     @MainActor
     func testAdvancedFeatures() {

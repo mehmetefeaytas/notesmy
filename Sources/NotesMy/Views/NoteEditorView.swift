@@ -19,6 +19,8 @@ public struct NoteEditorView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var copiedFeedback: Bool = false
     @State private var showOpacityPopover: Bool = false
+    @State private var showAIPopover: Bool = false
+    @State private var aiStatusMessage: String? = nil
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
         self.noteId = noteId
@@ -37,6 +39,10 @@ public struct NoteEditorView: View {
             if !isFolded {
                 if !detectedDates.isEmpty {
                     smartDateBanner
+                }
+
+                if let message = aiStatusMessage {
+                    aiBanner(message: message)
                 }
 
                 // Interactive Checklists quick-toggle strip if items exist
@@ -127,6 +133,9 @@ public struct NoteEditorView: View {
 
             Spacer()
 
+            // Apple Intelligence Sparkles Menu
+            aiToolsMenu
+
             // Category Menu
             Menu {
                 ForEach(store.categories, id: \.self) { cat in
@@ -216,6 +225,78 @@ public struct NoteEditorView: View {
         .padding(.bottom, 8)
     }
 
+    // MARK: - Apple Intelligence Menu
+
+    private var aiToolsMenu: some View {
+        Menu {
+            Section("Apple Intelligence") {
+                Button {
+                    applyAISummarize()
+                } label: {
+                    Label("Summarize Note", systemImage: "sparkles")
+                }
+
+                Button {
+                    applyAITasks()
+                } label: {
+                    Label("Extract Action Items", systemImage: "checklist")
+                }
+
+                Button {
+                    applyAITitle()
+                } label: {
+                    Label("Suggest Smart Title", systemImage: "character.textbox")
+                }
+
+                Button {
+                    applyAICategory()
+                } label: {
+                    Label("Auto-Categorize Note", systemImage: "folder.badge.gearshape")
+                }
+            }
+
+            Section("Rewrite & Transform") {
+                Button {
+                    applyAIRewrite(style: .concise)
+                } label: {
+                    Label("Make Concise", systemImage: "arrow.down.right.and.arrow.up.left")
+                }
+
+                Button {
+                    applyAIRewrite(style: .professional)
+                } label: {
+                    Label("Make Professional", systemImage: "briefcase")
+                }
+
+                Button {
+                    applyAIRewrite(style: .bulletPoints)
+                } label: {
+                    Label("Convert to Bullet Points", systemImage: "list.bullet")
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("AI")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                LinearGradient(
+                    colors: [Color.purple.opacity(0.25), Color.blue.opacity(0.25)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .foregroundColor(.purple)
+            .cornerRadius(5)
+        }
+        .menuStyle(.borderlessButton)
+        .help("Apple Intelligence Writing & Productivity Tools")
+    }
+
     // MARK: - Smart NLP Date Banner
 
     private var smartDateBanner: some View {
@@ -249,6 +330,34 @@ public struct NoteEditorView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
         .background(Color.white.opacity(0.45))
+        .cornerRadius(6)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+    }
+
+    private func aiBanner(message: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10))
+                .foregroundColor(.purple)
+
+            Text(message)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundColor(localColor.textColor)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button(action: { withAnimation { aiStatusMessage = nil } }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(Color.purple.opacity(0.12))
         .cornerRadius(6)
         .padding(.horizontal, 12)
         .padding(.bottom, 4)
@@ -292,13 +401,24 @@ public struct NoteEditorView: View {
 
     // MARK: - Main Editor
 
+    @ViewBuilder
     private var editorArea: some View {
-        TextEditor(text: $localBody)
-            .font(.system(size: 13, design: isCodeMode ? .monospaced : .rounded))
-            .foregroundColor(localColor.textColor)
-            .scrollContentBackground(.hidden)
-            .padding(.horizontal, 10)
-            .background(Color.clear)
+        if #available(macOS 15.0, *) {
+            TextEditor(text: $localBody)
+                .font(.system(size: 13, design: isCodeMode ? .monospaced : .rounded))
+                .foregroundColor(localColor.textColor)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 10)
+                .background(Color.clear)
+                .writingToolsBehavior(.complete)
+        } else {
+            TextEditor(text: $localBody)
+                .font(.system(size: 13, design: isCodeMode ? .monospaced : .rounded))
+                .foregroundColor(localColor.textColor)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 10)
+                .background(Color.clear)
+        }
     }
 
     // MARK: - Footer Bar
@@ -384,6 +504,49 @@ public struct NoteEditorView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(Color.black.opacity(0.04))
+    }
+
+    // MARK: - Apple Intelligence Actions
+
+    private func applyAISummarize() {
+        let summary = SmartAIService.shared.summarize(text: localBody)
+        if !summary.isEmpty {
+            localBody = "\(summary)\n\n---\n\n\(localBody)"
+            aiStatusMessage = "AI Summary added to top of note"
+        }
+    }
+
+    private func applyAITasks() {
+        let tasks = SmartAIService.shared.extractActionItems(from: localBody)
+        if !tasks.isEmpty {
+            let checklistBlock = tasks.map { "- [ ] \($0)" }.joined(separator: "\n")
+            localBody = "\(checklistBlock)\n\n\(localBody)"
+            aiStatusMessage = "Extracted \(tasks.count) action items into checklist"
+        } else {
+            let checklist = SmartAIService.shared.rewrite(text: localBody, style: .actionItems)
+            localBody = checklist
+            aiStatusMessage = "Converted lines to interactive checklist"
+        }
+    }
+
+    private func applyAITitle() {
+        let title = SmartAIService.shared.generateSmartTitle(for: localBody)
+        localTitle = title
+        aiStatusMessage = "AI generated title: \"\(title)\""
+    }
+
+    private func applyAICategory() {
+        let predicted = SmartAIService.shared.predictCategory(for: "\(localTitle) \(localBody)")
+        localCategory = predicted
+        aiStatusMessage = "Auto-categorized as \"\(predicted)\""
+    }
+
+    private func applyAIRewrite(style: AIStyle) {
+        let rewritten = SmartAIService.shared.rewrite(text: localBody, style: style)
+        if !rewritten.isEmpty {
+            localBody = rewritten
+            aiStatusMessage = "Transformed text: \(style.rawValue)"
+        }
     }
 
     // MARK: - Actions & Helpers
