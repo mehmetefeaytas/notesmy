@@ -2,6 +2,28 @@ import Foundation
 import AVFoundation
 import Speech
 
+/// Relay to capture audio buffers on CoreAudio's realtime thread without Swift 6 actor-isolation assertion crashes.
+private final class AudioTapRelay: @unchecked Sendable {
+    private let request: SFSpeechAudioBufferRecognitionRequest
+    private let file: AVAudioFile?
+
+    init(request: SFSpeechAudioBufferRecognitionRequest, file: AVAudioFile?) {
+        self.request = request
+        self.file = file
+    }
+
+    nonisolated func appendBuffer(_ buffer: AVAudioPCMBuffer) {
+        request.append(buffer)
+        if let file = file {
+            do {
+                try file.write(from: buffer)
+            } catch {
+                // Ignore buffer write hiccups on audio hardware thread
+            }
+        }
+    }
+}
+
 @MainActor
 public final class AudioRecordingService: NSObject, ObservableObject {
     public static let shared = AudioRecordingService()
@@ -16,6 +38,7 @@ public final class AudioRecordingService: NSObject, ObservableObject {
     private var audioEngine: AVAudioEngine?
     private var audioFile: AVAudioFile?
     private var currentRecordedURL: URL?
+    private var isTapInstalled: Bool = false
 
     public override init() {
         super.init()
@@ -29,17 +52,35 @@ public final class AudioRecordingService: NSObject, ObservableObject {
 
     nonisolated private static func requestMicrophoneAuth() async -> Bool {
         if #available(macOS 14.0, *) {
-            return await AVAudioApplication.requestRecordPermission()
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted:
+                return true
+            case .denied:
+                return false
+            case .undetermined:
+                return await AVAudioApplication.requestRecordPermission()
+            @unknown default:
+                return await AVAudioApplication.requestRecordPermission()
+            }
         } else {
             return true
         }
     }
 
     nonisolated private static func requestSpeechAuth() async -> Bool {
-        await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status == .authorized)
+        switch SFSpeechRecognizer.authorizationStatus() {
+        case .authorized:
+            return true
+        case .denied, .restricted:
+            return false
+        case .notDetermined:
+            return await withCheckedContinuation { continuation in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    continuation.resume(returning: status == .authorized)
+                }
             }
+        @unknown default:
+            return false
         }
     }
 
@@ -66,6 +107,7 @@ public final class AudioRecordingService: NSObject, ObservableObject {
 
         guard format.sampleRate > 0, format.channelCount > 0 else {
             print("Invalid audio input format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
+            cleanupEngine()
             return false
         }
 
@@ -109,12 +151,12 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             }
         }
 
-        // Capture local references safely outside of actor isolation for real-time audio tap
-        let localRequest = request
+        // Safe tap installation via nonisolated AudioTapRelay
+        let relay = AudioTapRelay(request: request, file: localFile)
         inputNode.installTap(onBus: bus, bufferSize: 1024, format: format) { buffer, _ in
-            localRequest.append(buffer)
-            try? localFile?.write(from: buffer)
+            relay.appendBuffer(buffer)
         }
+        self.isTapInstalled = true
 
         engine.prepare()
         do {
@@ -134,13 +176,7 @@ public final class AudioRecordingService: NSObject, ObservableObject {
         let finalURL = currentRecordedURL
         let finalTranscript = liveTranscript
 
-        if let engine = audioEngine {
-            if engine.isRunning {
-                engine.stop()
-            }
-            engine.inputNode.removeTap(onBus: 0)
-            audioEngine = nil
-        }
+        cleanupEngine()
 
         audioFile = nil
         currentRecordedURL = nil
@@ -153,5 +189,18 @@ public final class AudioRecordingService: NSObject, ObservableObject {
         isRecording = false
 
         return (audioURL: finalURL, transcript: finalTranscript)
+    }
+
+    private func cleanupEngine() {
+        if let engine = audioEngine {
+            if isTapInstalled {
+                engine.inputNode.removeTap(onBus: 0)
+                isTapInstalled = false
+            }
+            if engine.isRunning {
+                engine.stop()
+            }
+            audioEngine = nil
+        }
     }
 }

@@ -1167,11 +1167,17 @@ public struct NoteEditorView: View {
             Task {
                 let granted = await audioService.requestPermissions()
                 guard granted else {
-                    aiStatusMessage = loc.language == .turkish ? "Mikrofon izni gerekli" : "Microphone permission required"
+                    aiStatusMessage = loc.language == .turkish ? "Mikrofon ve konuşma tanıma izni gerekli" : "Microphone & speech recognition permission required"
                     return
                 }
-                isRecordingVoice = true
-                audioService.startRecording(language: loc.language) { _ in }
+                let started = audioService.startRecording(language: loc.language) { _ in }
+                if started {
+                    isRecordingVoice = true
+                    aiStatusMessage = loc.language == .turkish ? "Ses kaydediliyor... (Bitirmek için tekrar basın)" : "Recording audio... (Click again to stop)"
+                } else {
+                    isRecordingVoice = false
+                    aiStatusMessage = loc.language == .turkish ? "Ses kaydı başlatılamadı (Giriş cihazı bulunamadı)" : "Failed to start recording (No audio input device)"
+                }
             }
         }
     }
