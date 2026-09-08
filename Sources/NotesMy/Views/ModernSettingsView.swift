@@ -78,14 +78,14 @@ public struct ModernSettingsView: View {
 
             GroupBox("Language / Dil") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Picker("App Language / Dil Seçimi", selection: $loc.language) {
+                    Picker("App Language", selection: $loc.language) {
                         ForEach(AppLanguage.allCases) { lang in
-                            Text(lang.displayName).tag(lang)
+                            Text("\(lang.flag) \(lang.displayName)").tag(lang)
                         }
                     }
                     .pickerStyle(.menu)
 
-                    Text("Tüm arayüz metinleri, AI özetlemeleri ve ses tanıma bu dilde çalışır.")
+                    Text("All UI text, AI summaries and voice recognition use the selected language. Auto-detected from your system on first launch.")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }

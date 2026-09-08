@@ -914,8 +914,7 @@ public struct NoteEditorView: View {
             }
         } else {
             isRecordingVoice = true
-            let isTurkish = (loc.language == .turkish)
-            audioService.startRecording(isTurkish: isTurkish) { _ in }
+            audioService.startRecording(language: loc.language) { _ in }
         }
     }
 

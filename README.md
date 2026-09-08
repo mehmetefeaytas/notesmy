@@ -1,154 +1,158 @@
 # NotesMy 📌
 
-> **Smart notes with AI Second Brain, Knowledge Graph, iCloud Sync & Voice Transcription for macOS.**  
-> Powered natively by Swift 6, AppKit, SwiftUI, and **Apple Intelligence**. Zero clutter, zero subscriptions, zero tracking.
+> **Your AI-Powered Second Brain for macOS — Smart notes with Knowledge Graph, iCloud Sync & Voice Transcription.**  
+> Built natively with Swift 6, AppKit, SwiftUI & Apple Intelligence. Zero clutter, zero subscriptions, zero tracking.
 
 [![macOS](https://img.shields.io/badge/macOS-13.0%2B-black?style=flat&logo=apple)](https://apple.com)
 [![Homebrew Cask](https://img.shields.io/badge/Homebrew-Cask-blue?style=flat&logo=homebrew)](https://github.com/mehmetefeaytas/homebrew-tap)
 [![Apple Intelligence](https://img.shields.io/badge/Apple%20Intelligence-Ready-purple?style=flat&logo=apple)](README.md)
-[![Language](https://img.shields.io/badge/Languages-EN%20%7C%20TR-orange)](README.md)
+[![Languages](https://img.shields.io/badge/Languages-12-orange)](README.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-green)](README.md)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](README.md)
 
 ---
 
-## ⚡ Quick Install via Homebrew
+![NotesMy — AI-Powered Second Brain for macOS](assets/hero_banner.jpg)
 
-You can install NotesMy with a single command via [Homebrew](https://brew.sh):
+---
+
+## ⚡ Quick Install via Homebrew
 
 ```bash
 brew install --cask mehmetefeaytas/tap/notesmy
 ```
 
-To upgrade later:
-```bash
-brew upgrade --cask notesmy
-```
+| | |
+|---|---|
+| **Upgrade** | `brew upgrade --cask notesmy` |
+| **Uninstall** | `brew uninstall --cask notesmy` |
+| **Direct download** | [GitHub Releases →](https://github.com/mehmetefeaytas/notesmy/releases) |
 
-To uninstall cleanly:
-```bash
-brew uninstall --cask notesmy
-```
-
-Or download the universal `.dmg` installer directly from the [Releases page](https://github.com/mehmetefeaytas/notesmy/releases).
+> ⚠️ **Gatekeeper note (first launch):** Right-click the app → **Open** → click Open. Or run:  
+> `xattr -dr com.apple.quarantine /Applications/NotesMy.app`
 
 ---
 
-## 🌟 What's New in v1.5.0 — Second Brain & Knowledge Graph 🧠
+## 🌍 12 Languages Supported
 
-- 🕰️ **Version History:** Every note keeps a full snapshot timeline — restore any previous version with one click. Auto-snapshots before template apply or AI edits.
-- 📋 **Note Templates:** 5 built-in bilingual templates (Meeting Notes, Daily Planner, Code Review, Brainstorm, Bug Report). Apply in one tap from the editor header.
-- 🌐 **Knowledge Graph:** Visual 2D canvas auto-generated from `[[Note Title]]` wiki links. Drag nodes, zoom, and double-click to open any note directly (`⌥⌘G`).
-- 🤖 **AI Second Brain Chat:** Chat with your entire note collection. Semantic Q&A, daily plan generation, task extraction, and idea synthesis — all on-device.
-- ☁️ **iCloud CloudKit Sync:** Real-time sync across all your Apple devices using the CloudKit private database. Full offline support with background sync.
-- 🌍 **Web Clipper:** Copy any URL → click clip button → instant formatted note with title, source, and timestamp.
-- 📅 **Calendar Export:** Export note dates as `.ics` files — opens directly in Calendar.app (compatible with Google Calendar & Outlook).
-- ✏️ **Freehand Sketch Canvas:** Native AppKit drawing view in every note. Works with mouse, trackpad, and Apple Pencil via Sidecar. Saves as PNG attachment.
-- 🔗 **Wiki Links & Backlinks:** Write `[[Note Title]]` to create bidirectional links between notes. Backlinks strip shown at the bottom of the editor.
-- 💬 **Note Comments:** Timestamped comment threads per note. Full comment history preserved.
+NotesMy automatically detects your system language on first launch and switches the full UI instantly — no restart required.
 
-### Previous: v1.4.0
-
-- 🇹🇷 **Multi-Language (EN / TR):** Full UI localization with on-the-fly language switching.
-- 📌 **2D Sticky Board Canvas:** Freeform corkboard with draggable sticky cards, pushpins, and pan/zoom (`⌥⌘B`).
-- 🎙️ **Voice Notes & Transcription:** On-device `SFSpeechRecognizer` with Turkish & English support.
-- 📸 **Screenshot Capture:** Interactive screen selection with instant note attachment.
-- 🔍 **Vision OCR:** Extract text from images using the Apple Vision framework.
-- 🧠 **AI Note Cleanup & Smart Summary:** One-click braindump structuring and summaries.
-- ⚡ **Semantic Search:** `NLEmbedding`-powered conceptual search.
-- 🔤 **Typography & Card Sizes:** 5 fonts, adjustable size slider, 3 card size presets.
-- 🔔 **Reminders:** Native `UNUserNotificationCenter` alerts.
-- ⚙️ **Modern Multi-Tab Settings:** Live typography preview panel.
+| | Language | Voice Transcription |
+|---|---|---|
+| 🇬🇧 | English | ✅ en-US |
+| 🇹🇷 | Türkçe | ✅ tr-TR |
+| 🇩🇪 | Deutsch | ✅ de-DE |
+| 🇫🇷 | Français | ✅ fr-FR |
+| 🇪🇸 | Español | ✅ es-ES |
+| 🇧🇷 | Português (Brasil) | ✅ pt-BR |
+| 🇮🇹 | Italiano | ✅ it-IT |
+| 🇷🇺 | Русский | ✅ ru-RU |
+| 🇯🇵 | 日本語 | ✅ ja-JP |
+| 🇰🇷 | 한국어 | ✅ ko-KR |
+| 🇸🇦 | العربية (RTL) | ✅ ar-SA |
+| 🇨🇳 | 中文 (简体) | ✅ zh-CN |
 
 ---
 
+## 🌟 What's New in v1.5.0
 
+![Notes Grid — Filters, Tags & Checklists](assets/feature_notes.jpg)
+
+| Feature | Description |
+|---------|-------------|
+| 🕰️ **Version History** | Full snapshot timeline per note — restore any version with one click |
+| 📋 **Note Templates** | 5 bilingual built-in templates (Meeting, Daily Planner, Code Review, Brainstorm, Bug Report) |
+| 🌐 **Knowledge Graph** | 2D node canvas from `[[wiki links]]` — drag, zoom, double-click to open (`⌥⌘G`) |
+| 🤖 **AI Second Brain** | Chat with your entire note collection — Q&A, daily plan, task extraction |
+| ☁️ **iCloud CloudKit Sync** | Real-time sync across Apple devices, full offline support |
+| 🌍 **Web Clipper** | Copy URL → instant formatted note with title, source & timestamp |
+| 📅 **Calendar Export** | `.ics` export — opens in Calendar.app, Google Calendar, Outlook |
+| ✏️ **Freehand Sketch** | Native AppKit canvas for mouse, trackpad & Apple Pencil via Sidecar |
+| 🔗 **Wiki Links & Backlinks** | `[[Note Title]]` bidirectional links with backlinks strip in editor |
+| 💬 **Note Comments** | Timestamped comment threads, full history per note |
+
+---
+
+## 🧠 AI & Intelligence Features
+
+![AI Second Brain Chat & Knowledge Graph](assets/feature_ai.jpg)
+
+### 🤖 AI Second Brain Chat
+Chat naturally with your entire note collection. Ask *"What are my tasks for this week?"* or *"Summarize my meeting notes from last month"* — NotesMy semantically searches all your notes and synthesizes an answer, all on-device.
+
+### 🌐 Knowledge Graph
+Write `[[Note Title]]` anywhere in a note to create a bidirectional link. The Knowledge Graph view renders all your notes as an interactive 2D node canvas, showing how your ideas connect. Drag nodes, zoom, double-click to open any note.
+
+### 🧹 Format & Clean Messy Notes
+Dump raw thoughts and click **AI › Format & Organize**. On-device AI structures your braindump into paragraphs, bullet points, and an interactive checklist.
+
+### 📜 Smart Summary
+One-click executive summaries from long notes, meeting transcripts, or lecture notes. Powered by on-device NaturalLanguage processing.
+
+### 🔍 Semantic Search
+Find notes even without exact keywords. Toggle **Semantic Search** to match notes by concept, meaning, and synonyms using Apple `NLEmbedding`.
+
+### 💡 Smart Title & Auto-Categorize
+Click **AI › Suggest Smart Title** or **AI › Auto-Categorize** to classify notes into Work, Code, Ideas, or Personal — automatically.
+
+---
+
+## 🎙️ Voice Notes & Live Transcription
+
+![Voice Notes with Live Transcription](assets/feature_voice.jpg)
+
+Record voice notes hands-free with live transcription happening **100% on-device** using Apple `SFSpeechRecognizer`. Works in all 12 supported languages — the speech engine automatically uses the locale matching your current app language.
+
+- 🎤 Real-time waveform visualization
+- 📝 Live transcript appears as you speak
+- ✅ Transcription auto-appended to your note
+- 🌍 Switches speech locale when you change app language
+
+---
+
+## 📌 Sticky Board Canvas
+
+![Sticky Board — Freeform Corkboard Canvas](assets/feature_board.jpg)
+
+Open the **Sticky Board** (`⌥⌘B`) for a freeform corkboard where you drag notes anywhere, zoom in/out, and organize spatially. Great for brainstorming, project planning, and visual thinking.
+
+---
 
 ## 🚀 The 3-Stage Edge Interaction
 
 ```
 [Screen Edge]
      │
-     ├─ Step 1: At Rest (Dormant Pill)
-     │   └─ Sits quietly as a 14pt translucent pill with colored indicator dashes.
-     │      Zero screen obstruction, no dock clutter, 0% CPU at rest.
+     ├─ 1. At Rest  — 14pt translucent pill. Zero screen obstruction, 0% CPU.
      │
-     ├─ Step 2: Hover (Fanned Deck & Category Filter)
-     │   └─ Moving pointer to edge fans out the cards down the screen with
-     │      staggered spring animation, showing titles, colors & checklist progress.
+     ├─ 2. Hover    — Fanned deck slides out with spring animation.
+     │                Shows titles, colors & checklist progress bars.
      │
-     └─ Step 3: Write (Glassmorphic Editor + Apple Intelligence)
-         └─ Full in-place editing, Apple Intelligence Writing Tools, markdown checkboxes,
-            opacity slider, natural language date detection, code mode, and desktop pin.
+     └─ 3. Write    — Glassmorphic editor with Apple Intelligence Writing Tools,
+                      markdown checkboxes, date detection, voice, OCR & AI actions.
 ```
-
----
-
-## 🧠 Apple Intelligence & On-Device AI Features
-
-### 🪄 1. Native macOS Writing Tools Integration
-On macOS 15+ Sequoia and macOS 26, NotesMy activates native system **Apple Intelligence Writing Tools** (`.writingToolsBehavior(.complete)`). Select text or right-click to trigger Proofread, Rewrite, Friendly, Professional, Summary, or Table generation directly inside your sticky notes!
-
-### 🧹 2. Format & Clean Up Messy Braindumps
-Dump unorganized thoughts into a note and click **AI › Format & Organize Messy Note**. On-device AI extracts main takeaways, formats structured paragraphs, and turns to-dos into an interactive `- [ ] ` checklist.
-
-### 📜 3. On-Device Executive Summarization
-Turn lengthy meeting transcripts or lectures into punchy executive summaries with 1 click using on-device NaturalLanguage processing.
-
-### 🔍 4. Semantic Concept Search
-Find notes even if you don't remember the exact keywords. Toggle **Semantic Search** in the search library to match notes by meaning, concepts, and synonyms using Apple `NLEmbedding`.
-
-### 💡 5. Smart Title & Category Prediction
-Never worry about naming notes again. Click **AI › Suggest Smart Title** or **AI › Auto-Categorize** to let on-device AI classify your thoughts into *Work*, *Code*, *Ideas*, or *Personal*.
 
 ---
 
 ## ✨ Full Feature Matrix
 
-### 📌 2D Sticky Board Canvas
-Need a spatial view of your thoughts? Open the **Sticky Board** (`⌥⌘B` or via toolbar) to view a corkboard canvas where you can freely drag cards around, zoom in and out, and organize by categories.
-
-### 🎙️ Voice Notes with Live Speech-to-Text
-Tap the microphone button to dictate notes hands-free. Transcription happens 100% on-device with zero latency, supporting both Turkish (`tr-TR`) and English (`en-US`).
-
-### 📸 Direct Screenshot & Vision OCR
-Click the camera icon to select any region of your screen. The screenshot is saved locally into your note attachments. Tap the OCR button (`text.viewfinder`) to extract all text directly into editable Markdown.
-
-### 🔔 Native Notifications & Reminders
-Set reminders with specific dates and times. NotesMy delivers local macOS notifications (`UNUserNotificationCenter`) that open the exact note when clicked.
-
-### 🖥️ Multi-Display & Cursor Following
-Seamlessly supports dual or triple monitor setups. As your pointer moves between displays, NotesMy automatically aligns with the edge of your active monitor so notes are always right where your attention is.
-
-### 🍎 Apple Notes & Reminders 1-Click Bridge
-- Tap the **Apple Notes** button to export directly to your Apple Notes account.
-- Tap the **Reminders** button to turn tasks into macOS Reminders with due dates!
-
-### 📋 Clipboard History Hub *(Unclutter inspired)*
-Click the clipboard icon on the deck or menu bar to open your recent clipboard history and convert any copied text or URL into a fresh sticky note with 1 click. Or hit `⌥⌘V` anywhere for instant capture.
-
-### 🪟 Adjustable Window Translucency *(Noticky inspired)*
-Working on UI design or copying code from a browser behind your note? Use the built-in Opacity Slider (40%–100%) to make your sticky notes translucent.
-
-### 🗂️ Accordion Fold / Minimize *(SideNotes inspired)*
-Tap the fold arrow (`⌃`) to collapse the note into just a slender header bar.
-
-### 💻 Monospaced Code Mode
-Toggle **Code Mode** (`</>`) to format the note in a clean monospaced typeface with 1-click code copying.
-
-### 🎨 6 Curated Color Palettes
-- **Amber Yellow** (Classic warm sticky note)
-- **Coral Pink** (Vibrant, high-priority tasks)
-- **Mint Green** (Done / creative thoughts)
-- **Sky Blue** (Readings & references)
-- **Lavender Purple** (Brainstorming & personal)
-- **Slate Noir** (Minimalist dark mode paper)
-
-### 🛡️ Zero-Permission Security Architecture
-- **No Accessibility permissions needed:** Registered via standard Carbon Hotkey APIs.
-- **No Screen Recording or Input Monitoring:** Respects your privacy completely.
-- **100% Local & Offline:** Notes are saved as JSON/plaintext in `~/Library/Application Support/NotesMy/`. No cloud accounts, telemetry, or third-party tracking.
+| Category | Features |
+|----------|---------|
+| 📝 **Notes** | Text, Checklist, Colors (6 palettes), Tags, Pin, Favorites, Archive |
+| 🎨 **Appearance** | 5 fonts, size slider (11–22pt), 3 card size presets, dark/light mode |
+| 🔍 **Search** | Lexical + Semantic (`NLEmbedding`), filter tabs, color filters, full-text |
+| 🤖 **AI** | Format, Summarize, Extract Tasks, Smart Title, Auto-Categorize, Second Brain Chat |
+| 🎙️ **Voice** | 12-language recording, live transcription, waveform meter |
+| 📸 **Capture** | Interactive screenshot, Vision OCR, Web Clipper, freehand sketch |
+| 🔗 **Links** | `[[Wiki Links]]`, Knowledge Graph 2D canvas, backlinks strip |
+| ☁️ **Sync** | iCloud CloudKit (private DB), offline-first, background sync |
+| 📅 **Export** | Markdown, single TXT, .ics Calendar, Apple Notes, Reminders |
+| 🔔 **Reminders** | Native `UNUserNotificationCenter` alerts with exact date/time |
+| 🕰️ **History** | Version snapshots, restore, note comments timeline |
+| 📋 **Templates** | 5 bilingual built-ins + custom template support |
+| ⌨️ **Shortcuts** | `⌥⌘N/V/L/B/A/G`, `⌘[/]/./Esc`, hotkey customization |
+| 🛡️ **Privacy** | 100% local & offline, no telemetry, no accounts required |
 
 ---
 
@@ -156,55 +160,75 @@ Toggle **Code Mode** (`</>`) to format the note in a clean monospaced typeface w
 
 | Shortcut | Action |
 | :--- | :--- |
-| `⌥⌘N` | Create a new sticky note |
-| `⌥⌘V` | **Quick Capture:** Create note from clipboard |
+| `⌥⌘N` | Create new sticky note |
+| `⌥⌘V` | Quick Capture from clipboard |
 | `⌥⌘L` | Open All Notes & Search Library |
 | `⌥⌘B` | Open 2D Sticky Board Canvas |
+| `⌥⌘G` | Open Knowledge Graph |
 | `⌥⌘A` | Open Archive |
 | `⌃⌥⌘H` | Toggle edge deck visibility |
-| `⌘[` / `⌘]` | Flip through previous / next note in place |
-| `⌘.` | Cycle sticky note color theme |
+| `⌘[` / `⌘]` | Flip through notes |
+| `⌘.` | Cycle note color theme |
 | `Esc` | Close active note editor |
 
 ---
 
-## 🛠️ Building & Running from Source
+## 🛠️ Building from Source
 
 ### Prerequisites
-- macOS 13.0 or later (Universal binary: Apple Silicon + Intel)
+- macOS 13.0+ (Universal Binary: Apple Silicon + Intel)
 - Xcode 15+ / Swift 6.0 toolchain
 
-### Build via Swift Package Manager
 ```bash
-# Clone the repository
+# Clone
 git clone https://github.com/mehmetefeaytas/notesmy.git
 cd notesmy
 
-# Run test suite
+# Run tests (9 tests)
 swift test
 
-# Build universal DMG package
+# Build & package DMG (Universal Binary)
 ./package_dmg.sh
 
 # Open DMG
-open NotesMy-1.4.0.dmg
+open NotesMy-1.5.0.dmg
 ```
+
+### Release a new version
+```bash
+git tag v1.6.0 && git push origin main --tags
+# GitHub Actions automatically: tests → builds → packages → releases → updates Homebrew tap
+```
+
+---
+
+## 📋 Changelog
+
+### v1.5.0 — Second Brain & Knowledge Graph
+Version History, Templates, Knowledge Graph, AI Second Brain Chat, iCloud CloudKit Sync, Web Clipper, Calendar Export, Freehand Sketch, Wiki Links & Backlinks, Note Comments, **12-language support**
+
+### v1.4.0 — Multi-Language & Voice
+Turkish/English UI, Sticky Board Canvas, Voice Notes (live transcription), Screenshot Capture, Vision OCR, AI Cleanup & Summary, Semantic Search, Typography settings, Reminders, Modern Settings
+
+### v1.3.0 — Smart Capture
+Clipboard History Hub, Apple Notes export, Reminders export, Code Mode, Accordion Fold, Multi-display support
 
 ---
 
 ## 🤝 Contributing
 
 Contributions, feature suggestions, and bug reports are welcome!
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+
+1. Fork the project
+2. Create your feature branch: `git checkout -b feature/AmazingFeature`
+3. Commit: `git commit -m 'Add AmazingFeature'`
+4. Push: `git push origin feature/AmazingFeature`
 5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-Licensed under the **Apache License, Version 2.0** (the "License"). You may obtain a copy of the License in the [`LICENSE`](LICENSE) file.
+Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE).
 
 Developed with ❤️ by [Mehmet Efe Aytaş](https://github.com/mehmetefeaytas).

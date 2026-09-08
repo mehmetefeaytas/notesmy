@@ -38,14 +38,21 @@ public final class AudioRecordingService: NSObject, ObservableObject {
         return audioPermission && speechStatus
     }
 
-    public func startRecording(isTurkish: Bool = true, onTranscription: @escaping (String) -> Void) {
+    public func startRecording(language: AppLanguage = .english, onTranscription: @escaping (String) -> Void) {
         stopRecording()
 
-        let locale = isTurkish ? Locale(identifier: "tr-TR") : Locale(identifier: "en-US")
+        let locale = Locale(identifier: language.speechLocale)
         speechRecognizer = SFSpeechRecognizer(locale: locale)
 
         guard let recognizer = speechRecognizer, recognizer.isAvailable else {
-            print("Speech recognizer is not available for locale: \(locale.identifier)")
+            // Fallback to English if the requested locale isn't available on this device
+            let fallback = Locale(identifier: AppLanguage.english.speechLocale)
+            speechRecognizer = SFSpeechRecognizer(locale: fallback)
+            guard let fallbackRecognizer = speechRecognizer, fallbackRecognizer.isAvailable else {
+                print("Speech recognizer is not available for locale: \(locale.identifier)")
+                return
+            }
+            print("⚠️ Speech locale \(locale.identifier) unavailable, falling back to en-US")
             return
         }
 
