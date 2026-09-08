@@ -7,9 +7,9 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
 
     private var window: NSWindow?
 
-    public func show(filter: AllNotesWindowView.NoteFilter = .active) {
+    public func show(filter: AllNotesWindowView.NoteFilter = .active, viewMode: AllNotesWindowView.ViewMode = .list) {
         if let win = window {
-            let allNotesView = AllNotesWindowView(initialFilter: filter)
+            let allNotesView = AllNotesWindowView(initialFilter: filter, initialViewMode: viewMode)
             win.contentView = NSHostingView(rootView: allNotesView)
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -17,7 +17,7 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
         }
 
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 540),
+            contentRect: NSRect(x: 0, y: 0, width: 880, height: 580),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -29,7 +29,7 @@ public final class AllNotesWindowManager: NSObject, NSWindowDelegate {
         win.setFrameAutosaveName("NotesMyAllNotesWindow")
         win.delegate = self
 
-        let allNotesView = AllNotesWindowView(initialFilter: filter)
+        let allNotesView = AllNotesWindowView(initialFilter: filter, initialViewMode: viewMode)
         win.contentView = NSHostingView(rootView: allNotesView)
 
         self.window = win

@@ -205,8 +205,6 @@ NotesMy автоматически определяет язык операци�
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Поддержать-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Угостить%20кофе-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

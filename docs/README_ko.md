@@ -201,12 +201,10 @@ NotesMy는 macOS의 시스템 언어를 자동으로 감지하며 인터페이�
 
 ## 💖 후원 및 응원
 
-NotesMy가 여러분의 Mac 작업 환경을 더 쾌적하게 만들어 드렸다면 후원이나 커피 한 잔을 선물해 주세요:
+NotesMy가 여러분의 Mac 작업 환경을 더 쾌적하게 만들어 드렸다면 후원이나:
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-%ED%9B%84%EC%9B%90%ED%95%98%EA%B8%B0-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%EC%BB%A4%ED%94%BC%20%EC%84%A0%EB%AC%BC-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

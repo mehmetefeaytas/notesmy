@@ -201,12 +201,10 @@ Katkı kuralları ve test adımları için [CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ## 💖 Sponsorluk ve Destek
 
-NotesMy günlük iş akışınızı hızlandırıyor ve hayatınızı kolaylaştırıyorsa projeye sponsor olabilir veya bir kahve ısmarlayabilirsiniz:
+NotesMy günlük iş akışınızı hızlandırıyor ve hayatınızı kolaylaştırıyorsa projeye sponsor olabilir:
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Destek%20Ol-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Ba%C4%9F%C4%B1%C5%9F-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

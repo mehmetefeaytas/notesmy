@@ -201,12 +201,10 @@ Revisa nuestra guía [CONTRIBUTING.md](../CONTRIBUTING.md) para conocer las paut
 
 ## 💖 Patrocinio y Apoyo
 
-Si NotesMy te ayuda en tu día a día en el Mac, considera apoyar el desarrollo o invitar a un café:
+Si NotesMy te ayuda en tu día a día en el Mac, considera apoyar el desarrollo:
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Apoyar-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Invitar%20un%20caf%C3%A9-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

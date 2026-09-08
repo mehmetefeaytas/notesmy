@@ -201,12 +201,10 @@ Richtlinien und Testanweisungen finden Sie in [CONTRIBUTING.md](../CONTRIBUTING.
 
 ## 💖 Sponsoren & Unterstützung
 
-Wenn NotesMy Ihren Arbeitsablauf auf dem Mac bereichert, freuen wir uns über Ihre Unterstützung oder einen Kaffee:
+Wenn NotesMy Ihren Arbeitsablauf auf dem Mac bereichert, freuen wir uns über Ihre Unterstützung:
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Unterst%C3%BCtzen-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Spenden-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

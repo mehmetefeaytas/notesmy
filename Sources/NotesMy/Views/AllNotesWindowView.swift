@@ -52,8 +52,9 @@ public struct AllNotesWindowView: View {
         }
     }
 
-    public init(initialFilter: NoteFilter = .active) {
+    public init(initialFilter: NoteFilter = .active, initialViewMode: ViewMode = .list) {
         _selectedFilter = State(initialValue: initialFilter)
+        _viewMode = State(initialValue: initialViewMode)
         if initialFilter == .archived {
             _selectedNoteId = State(initialValue: NoteStore.shared.archivedNotes.first?.id)
         }

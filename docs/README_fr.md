@@ -201,12 +201,10 @@ Consultez le guide [CONTRIBUTING.md](../CONTRIBUTING.md) pour les consignes et l
 
 ## 💖 Sponsors & Soutien
 
-Si NotesMy simplifie votre quotidien sur Mac, vous pouvez soutenir le projet ou offrir un café :
+Si NotesMy simplifie votre quotidien sur Mac, vous pouvez soutenir le projet :
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Soutenir-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Offrir%20un%20caf%C3%A9-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

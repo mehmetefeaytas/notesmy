@@ -201,12 +201,10 @@ Consulte o arquivo [CONTRIBUTING.md](../CONTRIBUTING.md) para diretrizes de dese
 
 ## 💖 Patrocínio e Apoio
 
-Se o NotesMy agrega valor ao seu fluxo de trabalho diário no Mac, apoie o desenvolvimento ou pague um café:
+Se o NotesMy agrega valor ao seu fluxo de trabalho diário no Mac, apoie o desenvolvimento:
 
 <p align="center">
   <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Apoiar-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Pagar%20um%20caf%C3%A9-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>
 
 ---

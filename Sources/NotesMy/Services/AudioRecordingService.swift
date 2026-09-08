@@ -24,6 +24,18 @@ private final class AudioTapRelay: @unchecked Sendable {
     }
 }
 
+/// Installs tap completely outside actor isolation to guarantee no MainActor assertions on CoreAudio thread.
+private nonisolated func installRealtimeAudioTap(
+    on node: AVAudioNode,
+    bus: AVAudioNodeBus,
+    format: AVAudioFormat,
+    relay: AudioTapRelay
+) {
+    node.installTap(onBus: bus, bufferSize: 1024, format: format) { buffer, _ in
+        relay.appendBuffer(buffer)
+    }
+}
+
 @MainActor
 public final class AudioRecordingService: NSObject, ObservableObject {
     public static let shared = AudioRecordingService()
@@ -151,11 +163,9 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             }
         }
 
-        // Safe tap installation via nonisolated AudioTapRelay
+        // Safe tap installation via nonisolated top-level function
         let relay = AudioTapRelay(request: request, file: localFile)
-        inputNode.installTap(onBus: bus, bufferSize: 1024, format: format) { buffer, _ in
-            relay.appendBuffer(buffer)
-        }
+        installRealtimeAudioTap(on: inputNode, bus: bus, format: format, relay: relay)
         self.isTapInstalled = true
 
         engine.prepare()

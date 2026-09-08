@@ -94,10 +94,15 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         toggleDeckItem.target = self
         menu.addItem(toggleDeckItem)
 
-        let boardItem = NSMenuItem(title: isTR ? "Mantar Pano (Sticky Board)..." : "Sticky Board Canvas...", action: #selector(handleAllNotes), keyEquivalent: "b")
+        let boardItem = NSMenuItem(title: isTR ? "📌 Mantar Pano (Sticky Board)..." : "📌 Sticky Board Canvas...", action: #selector(handleStickyBoard), keyEquivalent: "b")
         boardItem.keyEquivalentModifierMask = [.option, .command]
         boardItem.target = self
         menu.addItem(boardItem)
+
+        let graphItem = NSMenuItem(title: isTR ? "🕸️ Bilgi Grafiği (Knowledge Graph)..." : "🕸️ Knowledge Graph...", action: #selector(handleKnowledgeGraph), keyEquivalent: "g")
+        graphItem.keyEquivalentModifierMask = [.option, .command]
+        graphItem.target = self
+        menu.addItem(graphItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -171,6 +176,14 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         Task {
             _ = await OCRService.shared.captureScreenAndExtractText()
         }
+    }
+
+    @objc private func handleStickyBoard() {
+        AllNotesWindowManager.shared.show(viewMode: .board)
+    }
+
+    @objc private func handleKnowledgeGraph() {
+        AllNotesWindowManager.shared.show(viewMode: .graph)
     }
 
     @objc private func handleCreateFromClipboardSnippet(_ sender: NSMenuItem) {
