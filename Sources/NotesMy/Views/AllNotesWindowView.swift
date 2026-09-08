@@ -5,9 +5,9 @@ public struct AllNotesWindowView: View {
     @ObservedObject var store = NoteStore.shared
     @State private var searchText: String = ""
     @State private var selectedFilter: NoteFilter = .active
+    @State private var selectedCategory: String = "All"
     @State private var selectedColorFilter: NoteColor? = nil
     @State private var selectedNoteId: UUID? = nil
-    @State private var showingExportSuccess: Bool = false
 
     public enum NoteFilter: String, CaseIterable, Identifiable {
         case active = "Active"
@@ -28,6 +28,10 @@ public struct AllNotesWindowView: View {
             result = result.filter { $0.isArchived }
         case .all:
             break
+        }
+
+        if selectedCategory != "All" {
+            result = result.filter { $0.category == selectedCategory }
         }
 
         if let color = selectedColorFilter {
@@ -51,11 +55,11 @@ public struct AllNotesWindowView: View {
         } detail: {
             detailContent
         }
-        .frame(minWidth: 720, minHeight: 480)
+        .frame(minWidth: 760, minHeight: 500)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button(action: {
-                    let note = store.createNote()
+                    let note = store.createNote(category: selectedCategory == "All" ? "General" : selectedCategory)
                     selectedNoteId = note.id
                 }) {
                     Label("New Note", systemImage: "plus")
@@ -100,7 +104,7 @@ public struct AllNotesWindowView: View {
             .padding(.horizontal, 10)
             .padding(.top, 8)
 
-            // Segmented Filter
+            // Segmented Filter (Active / Archived / All)
             Picker("", selection: $selectedFilter) {
                 ForEach(NoteFilter.allCases) { filter in
                     Text(filter.rawValue).tag(filter)
@@ -109,11 +113,22 @@ public struct AllNotesWindowView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 10)
 
+            // Categories Filter (SideNotes inspired)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    categoryButton(title: "All")
+                    ForEach(store.categories, id: \.self) { cat in
+                        categoryButton(title: cat)
+                    }
+                }
+                .padding(.horizontal, 10)
+            }
+
             // Color Filter Pills
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     Button(action: { selectedColorFilter = nil }) {
-                        Text("All")
+                        Text("All Colors")
                             .font(.system(size: 11, weight: selectedColorFilter == nil ? .bold : .regular))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -152,19 +167,34 @@ public struct AllNotesWindowView: View {
                 HStack(spacing: 10) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(note.color.dotColor)
-                        .frame(width: 4, height: 36)
+                        .frame(width: 4, height: 38)
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(note.displayTitle)
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
+                        HStack {
+                            Text(note.displayTitle)
+                                .font(.system(size: 12, weight: .semibold, design: note.isCodeMode ? .monospaced : .default))
+                                .lineLimit(1)
+
+                            if note.isCodeMode {
+                                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
 
                         Text(note.previewSnippet)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
 
-                        HStack {
+                        HStack(spacing: 6) {
+                            Text(note.category)
+                                .font(.system(size: 9, weight: .medium))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.secondary.opacity(0.15))
+                                .cornerRadius(3)
+
                             Text(note.updatedAt.formatted(date: .abbreviated, time: .shortened))
                                 .font(.system(size: 9))
                                 .foregroundColor(.secondary)
@@ -204,7 +234,23 @@ public struct AllNotesWindowView: View {
                 .padding(8)
             }
         }
-        .frame(minWidth: 260)
+        .frame(minWidth: 280)
+    }
+
+    private func categoryButton(title: String) -> some View {
+        let isSelected = selectedCategory == title
+        return Button(action: {
+            selectedCategory = title
+        }) {
+            Text(title)
+                .font(.system(size: 11, weight: isSelected ? .bold : .regular))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+                .foregroundColor(isSelected ? Color.accentColor : Color.secondary)
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Detail Pane
@@ -213,7 +259,6 @@ public struct AllNotesWindowView: View {
         Group {
             if let noteId = selectedNoteId, store.notes.contains(where: { $0.id == noteId }) {
                 NoteEditorView(noteId: noteId, store: store) {
-                    // Close action in manager window: clear selection
                     selectedNoteId = nil
                 }
                 .padding(16)

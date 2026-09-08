@@ -15,11 +15,11 @@
 
 Traditional sticky notes clutter your workspace, get buried under app windows, and turn your desktop into visual noise. On the other hand, heavy markdown or note-taking apps like Notion or Obsidian demand deliberate window management and context-switching for quick thoughts.
 
-**NotesMy** re-imagines quick scratchpads:
+**NotesMy** combines the best concepts from **HoldMyNotes**, **SideNotes**, **Tot**, and **Unclutter** into a single, unified, lightweight Mac desktop companion:
 * It sleeps on the screen edge as an elegant, 14pt vertical pill with colored dashes.
 * Reach for it with your mouse, and your notes **fan out smoothly** along the edge.
 * Select any note to expand it in-place, write your thoughts, and watch it auto-save locally within 300ms.
-* Packed with next-generation capabilities: **instant clipboard capture**, **smart date & calendar detection**, **interactive checklists**, and **multi-format exports**.
+* Packed with next-generation capabilities: **Folder Collections**, **Clipboard History Hub**, **Accordion Fold / Minimize**, **Adjustable Window Transparency**, **Monospaced Code Mode**, **Smart NLP Date & Calendar Detection**, and **Native macOS Share Sheet**.
 
 ---
 
@@ -32,33 +32,47 @@ Traditional sticky notes clutter your workspace, get buried under app windows, a
      │   └─ Sits quietly as a 14pt translucent pill with colored indicator dashes.
      │      Zero screen obstruction, no dock clutter, 0% CPU at rest.
      │
-     ├─ Step 2: Hover (Fanned Deck)
+     ├─ Step 2: Hover (Fanned Deck & Category Filter)
      │   └─ Moving pointer to edge fans out the cards down the screen with
      │      staggered spring animation, showing titles, colors & checklist progress.
      │
-     └─ Step 3: Write (Expanded Editor)
-         └─ Opens as a glassmorphic sticky note with full editing, checklist toggles,
-            natural language date detection, and desktop pin capability.
+     └─ Step 3: Write (Expanded Glassmorphic Editor)
+         └─ Full in-place editing, markdown checkboxes, opacity slider,
+            natural language date detection, code mode, and desktop pin capability.
 ```
 
 ---
 
-## ✨ Features & Next-Gen Additions
+## ✨ Feature Highlights (Inspired by the Best Tools)
 
-### 1. ⚡ Instant Quick Capture (`⌥⌘V`)
-Copy any link, snippet, or thought from your browser or terminal and hit `⌥⌘V`. NotesMy instantly parses your clipboard and creates a fresh sticky note ready in your deck.
+### 📂 1. Folders & Topic Collections *(Inspired by SideNotes)*
+Organize your scratchpad notes by topics: **Work**, **Personal**, **Code**, **Ideas**, and **General**. Filter the active deck with one click directly at the top of the edge fan, or view by collection in the All Notes library.
 
-### 2. 📅 Smart Natural Language Date & Calendar Detection
+### 📋 2. Clipboard History Hub *(Inspired by Unclutter)*
+Never lose a snippet. Click the clipboard icon on the deck or menu bar to open your recent clipboard history and convert any copied text or URL into a fresh sticky note with 1 click. Or hit `⌥⌘V` anywhere for instant capture.
+
+### 🪟 3. Adjustable Window Translucency & Glassmorphism *(Inspired by Noticky)*
+Working on UI design or copying code from a browser window behind your note? Use the built-in Opacity Slider (40%–100%) to make your sticky notes translucent and see right through them.
+
+### 🗂️ 4. Accordion Fold / Minimize *(Inspired by SideNotes)*
+Need a pinned sticky note on your screen without taking up space? Tap the fold arrow (`⌃`) to collapse the note into just a slender header bar. Click again to expand anytime.
+
+### 💻 5. Monospaced Code Mode *(Inspired by SideNotes)*
+Working with shell commands, API endpoints, or code snippets? Toggle **Code Mode** (`</>`) to format the note in a clean monospaced typeface with 1-click code copying.
+
+### 📅 6. Smart NLP Date & Calendar Detection
 NotesMy scans your notes using native macOS linguistic data detectors. Mentioning *"Meeting tomorrow at 3:00 PM"* or *"Friday 10am"* automatically surfaces a 1-click **"Add to Calendar"** badge right inside the note.
 
-### 3. ✅ Interactive Checklists & Markdown
+### ✅ 7. Interactive Checklists & Markdown
 Type `- [ ] ` or tap the checkbox button in the toolbar to create checklists. Checkboxes are interactive both in the full editor and as interactive quick-toggles directly on the note deck!
 
-### 4. 📌 Freely Pin to Desktop
+### 📌 8. Freely Pin to Desktop
 Want a reminder to stay permanently visible while coding or in a meeting? Click the **Pin** icon (`📌`) or drag the handle to peel the note off the edge and float it anywhere on your desktop.
 
-### 5. 🎨 6 Curated Color Palettes
-Every note carries its distinct visual tone:
+### 📤 9. Native macOS Sharing Sheet & Multi-Format Export *(Inspired by Tot)*
+Share notes directly to Mail, Messages, Apple Notes, or AirDrop using the native macOS Share Sheet (`NSSharingServicePicker`). Or batch export to Markdown (`.md`), Plain Text (`.txt`), or combined archives.
+
+### 🎨 10. 6 Curated Color Palettes
 - **Amber Yellow** (Classic warm sticky note)
 - **Coral Pink** (Vibrant, high-priority tasks)
 - **Mint Green** (Done / creative thoughts)
@@ -66,16 +80,7 @@ Every note carries its distinct visual tone:
 - **Lavender Purple** (Brainstorming & personal)
 - **Slate Noir** (Minimalist dark mode paper)
 
-### 6. 🔍 Unified "All Notes" Library & Search (`⌥⌘L`)
-A dedicated two-pane library window to browse, search, and filter your entire history by **Active**, **Archived**, or specific colors. Includes 10-second undo protection for accidental deletions.
-
-### 7. 📤 Multi-Format Export
-Export individual notes or your entire workspace into:
-- Individual Markdown files (`.md`)
-- Plain text (`.txt`)
-- Combined single document (`NotesMy_Export.txt`)
-
-### 8. 🛡️ Zero-Permission Security Architecture
+### 🛡️ 11. Zero-Permission Security Architecture
 - **No Accessibility permissions needed:** Registered via standard Carbon Hotkey APIs.
 - **No Screen Recording or Input Monitoring:** Respects your privacy completely.
 - **100% Local & Offline:** Notes are saved as JSON/plaintext in `~/Library/Application Support/NotesMy/`. No cloud accounts, telemetry, or third-party tracking.
@@ -136,17 +141,17 @@ notesmy/
 │       │   ├── NotesMy.swift        # Main entrypoint
 │       │   └── AppDelegate.swift    # App lifecycle & global hotkey binding
 │       ├── Models/
-│       │   ├── NoteItem.swift       # Note data model, checklists & attachments
+│       │   ├── NoteItem.swift       # Note model, categories, folding & opacity
 │       │   ├── NoteColor.swift      # 6 curated theme palettes & color extensions
 │       │   └── SmartDateDetector.swift # NLP date & calendar event detection
 │       ├── Services/
-│       │   ├── NoteStore.swift      # Debounced auto-save, CRUD & export engine
+│       │   ├── NoteStore.swift      # Debounced auto-save, categories & clipboard hub
 │       │   ├── ClipboardService.swift # Instant clipboard capture service
 │       │   └── HotKeyManager.swift  # Zero-permission Carbon hotkey bridge
 │       ├── Views/
 │       │   ├── EdgeDeckView.swift   # Resting pill & fanned spring stack UI
-│       │   ├── NoteEditorView.swift # Full-featured floating editor & checklists
-│       │   ├── AllNotesWindowView.swift # Split-view library & search
+│       │   ├── NoteEditorView.swift # Full-featured floating editor, folding & code mode
+│       │   ├── AllNotesWindowView.swift # Split-view library & category filters
 │       │   └── SettingsView.swift   # Preferences, docking & hotkey guide
 │       ├── Windows/
 │       │   ├── EdgeDeckWindowManager.swift  # Floating NSPanel on screen edge
@@ -154,10 +159,10 @@ notesmy/
 │       │   ├── AllNotesWindowManager.swift  # Standard library window
 │       │   └── SettingsWindowManager.swift  # Preferences window
 │       └── MenuBar/
-│           └── MenuBarController.swift      # Menu bar status item & quick actions
+│           └── MenuBarController.swift      # Status item & clipboard history menu
 └── Tests/
     └── NotesMyTests/
-        └── NotesMyTests.swift       # Swift Testing suite (CRUD, NLP, Colors)
+        └── NotesMyTests.swift       # Swift Testing suite (CRUD, Categories, NLP)
 ```
 
 ---

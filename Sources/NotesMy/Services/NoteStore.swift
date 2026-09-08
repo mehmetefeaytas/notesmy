@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import AppKit
 
 public enum DockSide: String, Codable, CaseIterable, Identifiable, Sendable {
     case right = "Right Edge"
@@ -22,6 +23,15 @@ public final class NoteStore: ObservableObject {
     @Published public var activationDelay: Double = 0.08
     @Published public var showOverFullScreen: Bool = true
     @Published public var recentlyDeletedNote: NoteItem? = nil
+
+    // Categories & Collections (SideNotes feature)
+    @Published public var categories: [String] = ["General", "Work", "Personal", "Code", "Ideas"]
+    @Published public var selectedCategory: String = "All"
+
+    // Clipboard History Hub (Unclutter feature)
+    @Published public var clipboardHistory: [String] = []
+    private var lastPasteboardChangeCount: Int = 0
+    private var clipboardTimer: Timer?
 
     private var saveCancellable: AnyCancellable?
     private let fileManager = FileManager.default
@@ -67,15 +77,53 @@ public final class NoteStore: ObservableObject {
                 self?.saveNotes()
             }
             .store(in: &cancellables)
+
+        startClipboardMonitor()
     }
 
     private var cancellables = Set<AnyCancellable>()
+
+    // MARK: - Clipboard History Monitor
+
+    private func startClipboardMonitor() {
+        lastPasteboardChangeCount = NSPasteboard.general.changeCount
+        // Poll pasteboard every 1.5 seconds unobtrusively
+        clipboardTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkPasteboard()
+            }
+        }
+    }
+
+    private func checkPasteboard() {
+        let currentCount = NSPasteboard.general.changeCount
+        guard currentCount != lastPasteboardChangeCount else { return }
+        lastPasteboardChangeCount = currentCount
+
+        if let string = NSPasteboard.general.string(forType: .string),
+           !string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clipboardHistory.contains(clean) {
+                clipboardHistory.insert(clean, at: 0)
+                if clipboardHistory.count > 10 {
+                    clipboardHistory.removeLast()
+                }
+            }
+        }
+    }
 
     // MARK: - Computed Properties
 
     public var activeNotes: [NoteItem] {
         notes.filter { !$0.isArchived }
             .sorted(by: { $0.updatedAt > $1.updatedAt })
+    }
+
+    public func activeNotes(for category: String) -> [NoteItem] {
+        if category == "All" {
+            return activeNotes
+        }
+        return activeNotes.filter { $0.category == category }
     }
 
     public var archivedNotes: [NoteItem] {
@@ -91,12 +139,17 @@ public final class NoteStore: ObservableObject {
     // MARK: - CRUD Operations
 
     @discardableResult
-    public func createNote(title: String = "", body: String = "", color: NoteColor? = nil) -> NoteItem {
+    public func createNote(
+        title: String = "",
+        body: String = "",
+        color: NoteColor? = nil,
+        category: String = "General",
+        isCodeMode: Bool = false
+    ) -> NoteItem {
         let selectedColor: NoteColor
         if let color = color {
             selectedColor = color
         } else {
-            // Cycle or pick smart color based on existing
             let colors = NoteColor.allCases
             let count = activeNotes.count
             selectedColor = colors[count % colors.count]
@@ -105,7 +158,9 @@ public final class NoteStore: ObservableObject {
         let newNote = NoteItem(
             title: title,
             body: body,
-            color: selectedColor
+            color: selectedColor,
+            category: category,
+            isCodeMode: isCodeMode
         )
         notes.insert(newNote, at: 0)
         selectedNoteId = newNote.id
@@ -141,6 +196,14 @@ public final class NoteStore: ObservableObject {
         note.body = lines.joined(separator: "\n")
         note.updatedAt = Date()
         notes[noteIndex] = note
+    }
+
+    public func toggleFold(noteId: UUID) {
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].isFolded.toggle()
+            notes[index].updatedAt = Date()
+            saveNotes()
+        }
     }
 
     public func archiveNote(id: UUID) {
@@ -211,7 +274,7 @@ public final class NoteStore: ObservableObject {
             let fileURL = destinationFolder.appendingPathComponent(fileName)
 
             var content = "# \(note.displayTitle)\n\n"
-            content += "> Created: \(note.createdAt.formatted()) | Color: \(note.color.rawValue)\n\n"
+            content += "> Created: \(note.createdAt.formatted()) | Category: \(note.category) | Color: \(note.color.rawValue)\n\n"
             content += note.body
 
             try content.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -223,7 +286,7 @@ public final class NoteStore: ObservableObject {
         for note in notes {
             fullText += "---\n\n"
             fullText += "## \(note.displayTitle)\n"
-            fullText += "*Status: \(note.isArchived ? "Archived" : "Active") | Updated: \(note.updatedAt.formatted())*\n\n"
+            fullText += "*Category: \(note.category) | Status: \(note.isArchived ? "Archived" : "Active") | Updated: \(note.updatedAt.formatted())*\n\n"
             fullText += "\(note.body)\n\n"
         }
         try fullText.write(to: destinationURL, atomically: true, encoding: .utf8)
@@ -257,8 +320,14 @@ public final class NoteStore: ObservableObject {
             var dockSide: DockSide
             var activationDelay: Double
             var showOverFullScreen: Bool
+            var categories: [String]
         }
-        let settings = Settings(dockSide: dockSide, activationDelay: activationDelay, showOverFullScreen: showOverFullScreen)
+        let settings = Settings(
+            dockSide: dockSide,
+            activationDelay: activationDelay,
+            showOverFullScreen: showOverFullScreen,
+            categories: categories
+        )
         if let data = try? JSONEncoder().encode(settings) {
             try? data.write(to: settingsFileURL, options: .atomic)
         }
@@ -271,11 +340,15 @@ public final class NoteStore: ObservableObject {
             var dockSide: DockSide
             var activationDelay: Double
             var showOverFullScreen: Bool
+            var categories: [String]?
         }
         if let settings = try? JSONDecoder().decode(Settings.self, from: data) {
             self.dockSide = settings.dockSide
             self.activationDelay = settings.activationDelay
             self.showOverFullScreen = settings.showOverFullScreen
+            if let cats = settings.categories, !cats.isEmpty {
+                self.categories = cats
+            }
         }
     }
 
@@ -285,41 +358,45 @@ public final class NoteStore: ObservableObject {
             body: """
             Welcome to your new edge-docked sticky notes deck!
 
-            ✨ **Quick Tips**:
-            - Move your pointer to the edge of the screen to fan out your deck.
-            - Click any card to open and edit in-place.
-            - Press `⌥⌘N` anywhere for an instant new note.
-            - Press `⌥⌘V` to capture your clipboard straight into a new note!
+            ✨ **Top New Features (SideNotes & Tot inspired)**:
+            - **Folders / Collections:** Filter by Work, Personal, or Code!
+            - **Code Mode:** Monospace fonts for clean snippet drafting.
+            - **Opacity Slider:** See through your floating note while typing.
+            - **Accordion Fold:** Click `⌃` to collapse a note into just a title bar.
+            - **Clipboard History:** Convert recently copied items into notes in 1 click!
 
             - [x] Try hovering over the screen edge
-            - [ ] Create your first custom sticky note
-            - [ ] Check out the All Notes window with `⌥⌘L`
+            - [ ] Toggle Code Mode on the code snippet card
+            - [ ] Test the opacity / transparency slider
+            - [ ] Check out All Notes window (`⌥⌘L`)
             """,
-            color: .amber
+            color: .amber,
+            category: "General"
         )
 
         let note2 = NoteItem(
-            title: "Project Milestones 🎯",
+            title: "Quick Shell Snippet 💻",
             body: """
-            Team sync tomorrow at 3:00 PM to review Q3 progress.
-
-            - [ ] Finalize Swift desktop edge animation
-            - [ ] Add NLP date detector for instant calendar events
-            - [x] Setup zero-cloud local encrypted storage
-            - [ ] Test multi-monitor support
+            # Useful Git & Docker shortcuts
+            git checkout -b feature/awesome
+            docker compose up -d --build
+            curl -I https://api.github.com
             """,
-            color: .mint
+            color: .slate,
+            category: "Code",
+            isCodeMode: true
         )
 
         let note3 = NoteItem(
-            title: "Book & Article Ideas 💡",
+            title: "Q3 Sprint Planning 🎯",
             body: """
-            "Designing Frictionless Desktop Micro-Tools"
-            - Deep dive into Fitts' Law and screen-edge docking
-            - Memory footprint optimization on Apple Silicon
-            - Native AppKit floating panels vs heavy webviews
+            Team kickoff tomorrow at 10:00 AM.
+            - Review Q3 UX milestones
+            - Deliver glassmorphism floating panel
+            - Polish native macOS sharing sheet
             """,
-            color: .sky
+            color: .mint,
+            category: "Work"
         )
 
         notes = [note1, note2, note3]

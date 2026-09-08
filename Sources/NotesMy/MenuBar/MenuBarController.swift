@@ -2,10 +2,11 @@ import AppKit
 import SwiftUI
 
 @MainActor
-public final class MenuBarController: NSObject {
+public final class MenuBarController: NSObject, NSMenuDelegate {
     public static let shared = MenuBarController()
 
     private var statusItem: NSStatusItem?
+    private var mainMenu: NSMenu?
 
     public func setup() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -15,13 +16,19 @@ public final class MenuBarController: NSObject {
             button.image = image
         }
 
-        buildMenu(for: item)
+        let menu = NSMenu()
+        menu.delegate = self
+        self.mainMenu = menu
+        item.menu = menu
         self.statusItem = item
     }
 
-    private func buildMenu(for item: NSStatusItem) {
-        let menu = NSMenu()
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        buildMenuItems(into: menu)
+    }
 
+    private func buildMenuItems(into menu: NSMenu) {
         let newNoteItem = NSMenuItem(title: "New Note", action: #selector(handleNewNote), keyEquivalent: "n")
         newNoteItem.keyEquivalentModifierMask = [.option, .command]
         newNoteItem.target = self
@@ -31,6 +38,26 @@ public final class MenuBarController: NSObject {
         captureItem.keyEquivalentModifierMask = [.option, .command]
         captureItem.target = self
         menu.addItem(captureItem)
+
+        // Clipboard History Submenu (Unclutter inspired)
+        let clipboardMenu = NSMenu()
+        let history = NoteStore.shared.clipboardHistory
+        if history.isEmpty {
+            let empty = NSMenuItem(title: "No clipboard history", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            clipboardMenu.addItem(empty)
+        } else {
+            for snippet in history.prefix(5) {
+                let title = String(snippet.prefix(35))
+                let item = NSMenuItem(title: "+ Note: \"\(title)...\"", action: #selector(handleCreateFromClipboardSnippet(_:)), keyEquivalent: "")
+                item.representedObject = snippet
+                item.target = self
+                clipboardMenu.addItem(item)
+            }
+        }
+        let clipboardMenuItem = NSMenuItem(title: "Clipboard History Hub", action: nil, keyEquivalent: "")
+        clipboardMenuItem.submenu = clipboardMenu
+        menu.addItem(clipboardMenuItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -55,7 +82,7 @@ public final class MenuBarController: NSObject {
             recentsMenu.addItem(emptyItem)
         } else {
             for note in active {
-                let noteItem = NSMenuItem(title: note.displayTitle, action: #selector(handleOpenRecentNote(_:)), keyEquivalent: "")
+                let noteItem = NSMenuItem(title: "\(note.category): \(note.displayTitle)", action: #selector(handleOpenRecentNote(_:)), keyEquivalent: "")
                 noteItem.representedObject = note.id
                 noteItem.target = self
                 recentsMenu.addItem(noteItem)
@@ -76,8 +103,6 @@ public final class MenuBarController: NSObject {
         let quitItem = NSMenuItem(title: "Quit NotesMy", action: #selector(handleQuit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-
-        item.menu = menu
     }
 
     @objc private func handleNewNote() {
@@ -87,6 +112,17 @@ public final class MenuBarController: NSObject {
 
     @objc private func handleQuickCapture() {
         if let note = ClipboardService.shared.captureToNewNote() {
+            NoteWindowManager.shared.openNote(id: note.id)
+        }
+    }
+
+    @objc private func handleCreateFromClipboardSnippet(_ sender: NSMenuItem) {
+        if let text = sender.representedObject as? String {
+            let note = NoteStore.shared.createNote(
+                title: String(text.prefix(30)),
+                body: text,
+                color: .amber
+            )
             NoteWindowManager.shared.openNote(id: note.id)
         }
     }

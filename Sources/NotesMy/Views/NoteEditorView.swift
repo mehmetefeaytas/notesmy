@@ -9,10 +9,16 @@ public struct NoteEditorView: View {
     @State private var localTitle: String = ""
     @State private var localBody: String = ""
     @State private var localColor: NoteColor = .amber
+    @State private var localCategory: String = "General"
     @State private var isPinned: Bool = false
+    @State private var isFolded: Bool = false
+    @State private var opacity: Double = 1.0
+    @State private var isCodeMode: Bool = false
     @State private var detectedDates: [SmartDateInfo] = []
     @State private var isDragTargetActive: Bool = false
     @State private var showDeleteConfirm: Bool = false
+    @State private var copiedFeedback: Bool = false
+    @State private var showOpacityPopover: Bool = false
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
         self.noteId = noteId
@@ -28,27 +34,38 @@ public struct NoteEditorView: View {
         VStack(spacing: 0) {
             headerBar
 
-            if !detectedDates.isEmpty {
-                smartDateBanner
+            if !isFolded {
+                if !detectedDates.isEmpty {
+                    smartDateBanner
+                }
+
+                // Interactive Checklists quick-toggle strip if items exist
+                if let note = currentNote, !note.checklistItems.isEmpty {
+                    checklistPreviewStrip(items: note.checklistItems)
+                }
+
+                editorArea
+
+                footerBar
             }
-
-            // Interactive Checklists quick-toggle strip if items exist
-            if let note = currentNote, !note.checklistItems.isEmpty {
-                checklistPreviewStrip(items: note.checklistItems)
-            }
-
-            editorArea
-
-            footerBar
         }
-        .frame(minWidth: 320, idealWidth: 360, minHeight: 340, idealHeight: 400)
-        .background(localColor.primaryColor)
+        .frame(
+            minWidth: 320,
+            idealWidth: 360,
+            minHeight: isFolded ? 48 : 340,
+            idealHeight: isFolded ? 48 : 400
+        )
+        .background(
+            localColor.primaryColor
+                .opacity(opacity)
+        )
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(localColor.borderTone, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isFolded)
         .onAppear {
             loadNoteData()
         }
@@ -62,6 +79,18 @@ public struct NoteEditorView: View {
             persistChanges()
             updateSmartDates()
         }
+        .onChange(of: opacity) { _ in
+            persistChanges()
+        }
+        .onChange(of: isFolded) { _ in
+            persistChanges()
+        }
+        .onChange(of: isCodeMode) { _ in
+            persistChanges()
+        }
+        .onChange(of: localCategory) { _ in
+            persistChanges()
+        }
         .onDrop(of: [.fileURL, .image], isTargeted: $isDragTargetActive) { providers in
             handleDrop(providers: providers)
         }
@@ -70,7 +99,16 @@ public struct NoteEditorView: View {
     // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
+            // Fold / Accordion Toggle
+            Button(action: { isFolded.toggle() }) {
+                Image(systemName: isFolded ? "chevron.right" : "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(isFolded ? "Expand Note" : "Fold / Collapse Note")
+
             // Color cycle button
             Button(action: cycleColor) {
                 Circle()
@@ -84,38 +122,76 @@ public struct NoteEditorView: View {
             // Title Field
             TextField("Note Title...", text: $localTitle)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: isCodeMode ? .monospaced : .rounded))
                 .foregroundColor(localColor.textColor)
 
             Spacer()
 
-            // Flip through notes (< and >)
-            Button(action: { store.cycleNote(forward: false) }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 10, weight: .semibold))
+            // Category Menu
+            Menu {
+                ForEach(store.categories, id: \.self) { cat in
+                    Button(cat) {
+                        localCategory = cat
+                    }
+                }
+            } label: {
+                Text(localCategory)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundColor(localColor.secondaryTextColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.black.opacity(0.06))
+                    .cornerRadius(4)
             }
-            .buttonStyle(.plain)
-            .help("Previous Note (⌘[)")
+            .menuStyle(.borderlessButton)
 
-            Button(action: { store.cycleNote(forward: true) }) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(localColor.secondaryTextColor)
-            }
-            .buttonStyle(.plain)
-            .help("Next Note (⌘])")
-
-            Divider().frame(height: 12)
-
-            // Checklist insert button
-            Button(action: insertChecklistItem) {
-                Image(systemName: "checkmark.square")
+            // Opacity / Translucency Popover Button
+            Button(action: { showOpacityPopover.toggle() }) {
+                Image(systemName: "circle.lefthalf.filled")
                     .font(.system(size: 11))
                     .foregroundColor(localColor.secondaryTextColor)
             }
             .buttonStyle(.plain)
-            .help("Insert Checklist Item")
+            .popover(isPresented: $showOpacityPopover) {
+                VStack(spacing: 8) {
+                    Text("Window Opacity: \(Int(opacity * 100))%")
+                        .font(.system(size: 11, weight: .medium))
+                    Slider(value: $opacity, in: 0.4...1.0, step: 0.05)
+                        .frame(width: 120)
+                }
+                .padding(10)
+            }
+            .help("Window Transparency")
+
+            // Code Mode Toggle
+            Button(action: { isCodeMode.toggle() }) {
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .font(.system(size: 10, weight: isCodeMode ? .bold : .regular))
+                    .foregroundColor(isCodeMode ? Color.accentColor : localColor.secondaryTextColor)
+                    .padding(3)
+                    .background(isCodeMode ? Color.accentColor.opacity(0.18) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .help(isCodeMode ? "Disable Code Mode" : "Enable Monospace Code Mode")
+
+            // Copy Note Text Button
+            Button(action: copyToClipboard) {
+                Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 11))
+                    .foregroundColor(copiedFeedback ? .green : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Copy Note Content")
+
+            // Native Share Button
+            Button(action: shareNote) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Share Note...")
 
             // Pin / Floating toggle
             Button(action: togglePin) {
@@ -125,15 +201,6 @@ public struct NoteEditorView: View {
             }
             .buttonStyle(.plain)
             .help(isPinned ? "Unpin from desktop" : "Pin to desktop")
-
-            // Archive button
-            Button(action: archiveNote) {
-                Image(systemName: "archivebox")
-                    .font(.system(size: 11))
-                    .foregroundColor(localColor.secondaryTextColor)
-            }
-            .buttonStyle(.plain)
-            .help("Archive Note")
 
             // Close button
             Button(action: onClose) {
@@ -146,7 +213,7 @@ public struct NoteEditorView: View {
         }
         .padding(.horizontal, 14)
         .padding(.top, 12)
-        .padding(.bottom, 6)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Smart NLP Date Banner
@@ -227,7 +294,7 @@ public struct NoteEditorView: View {
 
     private var editorArea: some View {
         TextEditor(text: $localBody)
-            .font(.system(size: 13, design: .rounded))
+            .font(.system(size: 13, design: isCodeMode ? .monospaced : .rounded))
             .foregroundColor(localColor.textColor)
             .scrollContentBackground(.hidden)
             .padding(.horizontal, 10)
@@ -246,6 +313,43 @@ public struct NoteEditorView: View {
                 .foregroundColor(localColor.secondaryTextColor.opacity(0.8))
 
             Spacer()
+
+            // Flip through notes (< and >)
+            Button(action: { store.cycleNote(forward: false) }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Previous Note (⌘[)")
+
+            Button(action: { store.cycleNote(forward: true) }) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Next Note (⌘])")
+
+            Divider().frame(height: 10)
+
+            // Checklist insert button
+            Button(action: insertChecklistItem) {
+                Image(systemName: "checkmark.square")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Insert Checklist Item")
+
+            // Archive button
+            Button(action: archiveNote) {
+                Image(systemName: "archivebox")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Archive Note")
 
             if showDeleteConfirm {
                 HStack(spacing: 6) {
@@ -289,7 +393,11 @@ public struct NoteEditorView: View {
         self.localTitle = note.title
         self.localBody = note.body
         self.localColor = note.color
+        self.localCategory = note.category
         self.isPinned = note.isPinned
+        self.isFolded = note.isFolded
+        self.opacity = note.opacity
+        self.isCodeMode = note.isCodeMode
         updateSmartDates()
     }
 
@@ -298,7 +406,11 @@ public struct NoteEditorView: View {
         note.title = localTitle
         note.body = localBody
         note.color = localColor
+        note.category = localCategory
         note.isPinned = isPinned
+        note.isFolded = isFolded
+        note.opacity = opacity
+        note.isCodeMode = isCodeMode
         store.updateNote(note)
     }
 
@@ -332,6 +444,28 @@ public struct NoteEditorView: View {
     private func archiveNote() {
         store.archiveNote(id: noteId)
         onClose()
+    }
+
+    private func copyToClipboard() {
+        let fullText = localTitle.isEmpty ? localBody : "# \(localTitle)\n\n\(localBody)"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(fullText, forType: .string)
+        withAnimation {
+            copiedFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                copiedFeedback = false
+            }
+        }
+    }
+
+    private func shareNote() {
+        let fullText = localTitle.isEmpty ? localBody : "# \(localTitle)\n\n\(localBody)"
+        let picker = NSSharingServicePicker(items: [fullText])
+        if let keyWindow = NSApp.keyWindow, let contentView = keyWindow.contentView {
+            picker.show(relativeTo: contentView.bounds, of: contentView, preferredEdge: .minY)
+        }
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {

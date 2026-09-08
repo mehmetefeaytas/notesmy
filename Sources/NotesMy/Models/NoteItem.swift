@@ -37,6 +37,12 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
     public var tags: [String]
     public var attachments: [NoteAttachment]
 
+    // Advanced Features (SideNotes, Tot & Unclutter inspired)
+    public var category: String
+    public var isFolded: Bool
+    public var opacity: Double
+    public var isCodeMode: Bool
+
     public init(
         id: UUID = UUID(),
         title: String = "",
@@ -49,7 +55,11 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         pinnedX: Double? = nil,
         pinnedY: Double? = nil,
         tags: [String] = [],
-        attachments: [NoteAttachment] = []
+        attachments: [NoteAttachment] = [],
+        category: String = "General",
+        isFolded: Bool = false,
+        opacity: Double = 1.0,
+        isCodeMode: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -63,6 +73,30 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.pinnedY = pinnedY
         self.tags = tags
         self.attachments = attachments
+        self.category = category
+        self.isFolded = isFolded
+        self.opacity = opacity
+        self.isCodeMode = isCodeMode
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
+        self.body = try container.decodeIfPresent(String.self, forKey: .body) ?? ""
+        self.color = try container.decodeIfPresent(NoteColor.self, forKey: .color) ?? .amber
+        self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+        self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        self.isArchived = try container.decodeIfPresent(Bool.self, forKey: .isArchived) ?? false
+        self.pinnedX = try container.decodeIfPresent(Double.self, forKey: .pinnedX)
+        self.pinnedY = try container.decodeIfPresent(Double.self, forKey: .pinnedY)
+        self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        self.attachments = try container.decodeIfPresent([NoteAttachment].self, forKey: .attachments) ?? []
+        self.category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
+        self.isFolded = try container.decodeIfPresent(Bool.self, forKey: .isFolded) ?? false
+        self.opacity = try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1.0
+        self.isCodeMode = try container.decodeIfPresent(Bool.self, forKey: .isCodeMode) ?? false
     }
 
     public var displayTitle: String {

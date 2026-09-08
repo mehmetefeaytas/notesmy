@@ -10,6 +10,7 @@ public struct EdgeDeckView: View {
     public var onOpenSettings: () -> Void
 
     @State private var hoveredCardId: UUID? = nil
+    @State private var showClipboardDrawer: Bool = false
 
     public init(
         store: NoteStore = .shared,
@@ -27,6 +28,10 @@ public struct EdgeDeckView: View {
         self.onOpenArchive = onOpenArchive
         self.onQuickCapture = onQuickCapture
         self.onOpenSettings = onOpenSettings
+    }
+
+    private var displayedNotes: [NoteItem] {
+        store.activeNotes(for: store.selectedCategory)
     }
 
     public var body: some View {
@@ -87,15 +92,31 @@ public struct EdgeDeckView: View {
     // MARK: - Fanned Deck View (Hover State)
 
     private var fannedDeckView: some View {
-        VStack(alignment: .trailing, spacing: 10) {
+        VStack(alignment: .trailing, spacing: 8) {
+            // Category Filter Bar (SideNotes feature)
+            categoryFilterBar
+
+            // Clipboard History Drawer (Unclutter feature)
+            if showClipboardDrawer {
+                clipboardHistoryDrawer
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
             // Deck Card Stack
             VStack(alignment: .trailing, spacing: 6) {
-                ForEach(Array(store.activeNotes.prefix(6).enumerated()), id: \.element.id) { index, note in
+                ForEach(Array(displayedNotes.prefix(6).enumerated()), id: \.element.id) { index, note in
                     deckCard(note: note, index: index)
                 }
 
-                if store.activeNotes.count > 6 {
-                    Text("+\(store.activeNotes.count - 6) more in All Notes")
+                if displayedNotes.isEmpty {
+                    Text("No notes in \(store.selectedCategory)")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .padding(8)
+                }
+
+                if displayedNotes.count > 6 {
+                    Text("+\(displayedNotes.count - 6) more in All Notes")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 10)
@@ -105,7 +126,7 @@ public struct EdgeDeckView: View {
             }
 
             // Quick Control Bar
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Button(action: onNewNote) {
                     Label("New", systemImage: "plus")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -118,15 +139,21 @@ public struct EdgeDeckView: View {
                 .buttonStyle(.plain)
                 .help("Create Note (⌥⌘N)")
 
-                Button(action: onQuickCapture) {
-                    Image(systemName: "doc.on.clipboard")
+                // Clipboard Drawer toggle
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showClipboardDrawer.toggle()
+                    }
+                }) {
+                    Image(systemName: showClipboardDrawer ? "doc.on.clipboard.fill" : "doc.on.clipboard")
                         .font(.system(size: 11))
+                        .foregroundColor(showClipboardDrawer ? Color.accentColor : Color.primary)
                         .padding(5)
-                        .background(Color.secondary.opacity(0.12))
+                        .background(showClipboardDrawer ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.12))
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .help("Capture Clipboard (⌥⌘V)")
+                .help("Clipboard History Hub")
 
                 Button(action: onOpenAllNotes) {
                     Image(systemName: "magnifyingglass")
@@ -161,7 +188,7 @@ public struct EdgeDeckView: View {
             .padding(6)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+                    .fill(Color(nsColor: .windowBackgroundColor).opacity(0.94))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
@@ -170,17 +197,107 @@ public struct EdgeDeckView: View {
             )
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
         .contentShape(Rectangle())
         .onHover { hovering in
             if !hovering {
-                // Return to resting pill state
                 withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
                     store.isDeckHovered = false
+                    showClipboardDrawer = false
                 }
             }
         }
     }
+
+    // MARK: - Category Filter Bar
+
+    private var categoryFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 5) {
+                categoryTab(title: "All")
+                ForEach(store.categories, id: \.self) { cat in
+                    categoryTab(title: cat)
+                }
+            }
+            .padding(4)
+        }
+        .frame(maxWidth: 240)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.9))
+        )
+    }
+
+    private func categoryTab(title: String) -> some View {
+        let isSelected = store.selectedCategory == title
+        return Button(action: {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                store.selectedCategory = title
+            }
+        }) {
+            Text(title)
+                .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+                .foregroundColor(isSelected ? Color.accentColor : Color.secondary)
+                .cornerRadius(5)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Clipboard History Drawer
+
+    private var clipboardHistoryDrawer: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Recent Clipboard")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 4)
+
+            if store.clipboardHistory.isEmpty {
+                Text("Copy text anywhere to see it here")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .padding(4)
+            } else {
+                ForEach(store.clipboardHistory.prefix(3), id: \.self) { snippet in
+                    HStack {
+                        Text(snippet.prefix(35))
+                            .font(.system(size: 10, design: .monospaced))
+                            .lineLimit(1)
+                            .foregroundColor(.primary)
+
+                        Spacer()
+
+                        Button("+ Note") {
+                            let note = store.createNote(
+                                title: String(snippet.prefix(25)),
+                                body: snippet,
+                                color: .amber
+                            )
+                            onSelectNote(note.id)
+                        }
+                        .font(.system(size: 9, weight: .bold))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                    .padding(4)
+                    .background(Color.black.opacity(0.04))
+                    .cornerRadius(4)
+                }
+            }
+        }
+        .padding(8)
+        .frame(width: 230)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.96))
+                .shadow(radius: 4)
+        )
+    }
+
+    // MARK: - Deck Card Item
 
     private func deckCard(note: NoteItem, index: Int) -> some View {
         let isHovered = hoveredCardId == note.id
@@ -195,10 +312,18 @@ public struct EdgeDeckView: View {
                     .frame(width: 4, height: 32)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(note.displayTitle)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(note.color.textColor)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(note.displayTitle)
+                            .font(.system(size: 12, weight: .semibold, design: note.isCodeMode ? .monospaced : .rounded))
+                            .foregroundColor(note.color.textColor)
+                            .lineLimit(1)
+
+                        if note.isCodeMode {
+                            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                .font(.system(size: 8))
+                                .foregroundColor(note.color.secondaryTextColor)
+                        }
+                    }
 
                     if let progress = note.checklistProgress {
                         HStack(spacing: 4) {
@@ -211,7 +336,7 @@ public struct EdgeDeckView: View {
                         }
                     } else {
                         Text(note.previewSnippet)
-                            .font(.system(size: 10, design: .rounded))
+                            .font(.system(size: 10, design: note.isCodeMode ? .monospaced : .rounded))
                             .foregroundColor(note.color.secondaryTextColor)
                             .lineLimit(1)
                     }
@@ -225,7 +350,7 @@ public struct EdgeDeckView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .frame(width: isHovered ? 210 : 190)
+            .frame(width: isHovered ? 220 : 200)
             .background(
                 RoundedRectangle(cornerRadius: 9)
                     .fill(note.color.cardColor)

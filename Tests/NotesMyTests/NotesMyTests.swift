@@ -26,7 +26,8 @@ struct NotesMyTests {
         let note = NoteItem(
             title: "",
             body: body,
-            color: .amber
+            color: .amber,
+            category: "Work"
         )
 
         #expect(note.displayTitle == "This is a demo task list:")
@@ -48,6 +49,32 @@ struct NotesMyTests {
         #expect(!detected.isEmpty)
         #expect(detected.first?.date != nil)
         #expect(!detected.first!.formattedDescription.isEmpty)
+    }
+
+    @Test("Categories and advanced features (SideNotes & Tot inspired)")
+    @MainActor
+    func testAdvancedFeatures() {
+        let store = NoteStore()
+
+        let devNote = store.createNote(
+            title: "Swift Terminal",
+            body: "swift build -c release",
+            color: .slate,
+            category: "Code",
+            isCodeMode: true
+        )
+
+        #expect(devNote.category == "Code")
+        #expect(devNote.isCodeMode == true)
+
+        // Test category filter
+        let codeNotes = store.activeNotes(for: "Code")
+        #expect(codeNotes.contains(where: { $0.id == devNote.id }))
+
+        // Test Fold / Accordion
+        store.toggleFold(noteId: devNote.id)
+        let folded = store.notes.first(where: { $0.id == devNote.id })
+        #expect(folded?.isFolded == true)
     }
 
     @Test("NoteStore CRUD operations")
