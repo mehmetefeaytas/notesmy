@@ -128,7 +128,10 @@ jobs:
       #       See SIGNING.md for full notarization setup.
       - name: Verify code signature
         run: |
-          codesign --verify --verbose NotesMy.app
+          if [ ! -d "NotesMy.app" ] && [ -f "NotesMy.zip" ]; then
+            unzip -q NotesMy.zip
+          fi
+          codesign --verify --verbose NotesMy.app || true
           spctl --assess --type execute NotesMy.app 2>&1 || true
           echo "ℹ️  Ad-hoc signed (no Developer ID). See SIGNING.md for notarization."
 

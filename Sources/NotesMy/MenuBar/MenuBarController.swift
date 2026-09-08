@@ -141,6 +141,14 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
+        let updateItem = NSMenuItem(
+            title: isTR ? "🔄 Güncellemeleri Denetle..." : "🔄 Check for Updates...",
+            action: #selector(handleCheckForUpdates),
+            keyEquivalent: ""
+        )
+        updateItem.target = self
+        menu.addItem(updateItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(title: "Quit NotesMy", action: #selector(handleQuit), keyEquivalent: "q")
@@ -192,6 +200,13 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func handleSettings() {
         SettingsWindowManager.shared.show()
+    }
+
+    @objc private func handleCheckForUpdates() {
+        SettingsWindowManager.shared.show()
+        Task {
+            await UpdateService.shared.checkForUpdates(isUserInitiated: true)
+        }
     }
 
     @objc private func handleQuit() {

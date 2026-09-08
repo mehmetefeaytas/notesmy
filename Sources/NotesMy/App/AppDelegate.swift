@@ -46,6 +46,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Setup Global Hotkeys
         setupGlobalHotkeys()
+
+        // Automatic Background Update Check
+        if UpdateService.shared.autoCheckEnabled {
+            Task {
+                await UpdateService.shared.checkForUpdates(isUserInitiated: false)
+            }
+        }
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

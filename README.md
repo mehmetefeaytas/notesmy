@@ -53,9 +53,11 @@ Built 100% natively using **Swift 6, SwiftUI, and AppKit**, NotesMy stays out of
 ### ✨ Key Highlights
 
 - 🪟 **Edge-Docked Deck:** Hover or gesture over the screen edge to reveal all your active notes in an animated, fanned-card dock.
+- 🔄 **In-App Auto-Updates:** Direct GitHub Release checking from Settings, changelog viewer, DMG download progress bar, and 1-click update.
+- ⌨️ **Keyboard Category Navigation:** Seamlessly glide across tags and categories using left/right arrow keys (`←` / `→`) and clickable chevrons.
 - 🗑️ **Quick Delete & Inactive Notes Cleanup:** One-click instant deletion right on note cards, plus intelligent automated detection and archiving of stale notes unused for >30 days.
 - ⚙️ **Safe Maintenance:** Safe window close handling (red close button never quits the app) and a two-stage confirmed data reset danger zone.
-- 🧠 **AI Second Brain & Knowledge Graph:** Connect your thoughts using `[[WikiLinks]]`, chat conversationally with your notes collection, and explore your ideas on a 2D interactive force-directed graph.
+- 🧠 **Mathematical AI Knowledge Graph:** Coulomb-Hooke physics simulation, Jaccard concept similarity, bidirectional `[[WikiLinks]]`, and vibrant glowing solid-line connections upon selection.
 - 🔍 **Screen OCR & Vision AI:** Snip any area of your display (crosshair selection) to extract clean text into your clipboard or note instantly.
 - 🎙️ **On-Device Voice Transcription:** Real-time speech-to-text supporting 12 languages with zero latency and zero privacy risk.
 - 📌 **Freeform Sticky Board:** Arrange notes as colorful sticky cards on an infinite zoomable, draggable corkboard canvas.
@@ -125,6 +127,7 @@ Prefer a direct DMG download? Grab the latest Universal binary from [GitHub Rele
 | **V1 — MVP** | Text & Checklist Notes with custom pastel themes | ✅ | Native SwiftUI TextEditor |
 | **V1 — MVP** | Edge-Docked Fanned Card Deck | ✅ | AppKit Floating NSPanel |
 | **V1 — MVP** | Tags, Categories, Pinning & Favorites | ✅ | Local JSON Storage |
+| **V1 — MVP** | Arrow-Key Navigation (`←` / `→`) across Categories | ✅ | AppKit Event Monitor + ScrollViewReader |
 | **V1 — MVP** | Quick Delete on Card Rows | ✅ | Swift Action Handler |
 | **V1 — MVP** | Clipboard History Hub (Auto-Capture) | ✅ | NSPasteboard Monitor |
 | **V1 — MVP** | Interactive Color Picker & Resizable Windows | ✅ | AppKit NSWindow + SwiftUI |
@@ -134,12 +137,14 @@ Prefer a direct DMG download? Grab the latest Universal binary from [GitHub Rele
 | **V2 — Supercharged** | Inactive Notes (>30 Days) Cleanup & Archive | ✅ | Date-based Staleness Engine |
 | **V2 — Supercharged** | Natural Language Smart Date & Reminder Alerts | ✅ | NSDataDetector + UserNotifications |
 | **V2 — Supercharged** | Semantic Concept Vector Search | ✅ | Apple NaturalLanguage Embeddings |
+| **V3 — Connected** | In-App Auto-Updates & GitHub Release Checker | ✅ | GitHub REST API + URLSession |
 | **V3 — Connected** | Web Clipper with Manual & Clipboard URL Fallback | ✅ | WebKit + URLSession |
 | **V3 — Connected** | One-Click Calendar Integration (.ics) | ✅ | RFC 5545 Calendar Generator |
 | **V3 — Connected** | Export to Apple Notes & Reminders | ✅ | NSSharingService + EventKit |
 | **V3 — Connected** | CloudKit Private Database Sync & Local Backup | ✅ | Apple CloudKit Container |
 | **V3 — Connected** | Note Version History & Time-Travel Restore | ✅ | Incremental Snapshots |
-| **V4 — Second Brain** | Interactive Node Knowledge Graph with Search | ✅ | Graph Force Directed Layout |
+| **V4 — Second Brain** | Force-Directed Coulomb-Hooke AI Knowledge Graph | ✅ | Mathematical Physics + Canvas |
+| **V4 — Second Brain** | Solid Glowing Colored Connections on Selection | ✅ | SwiftUI Vector Graph Paths |
 | **V4 — Second Brain** | Bidirectional `[[WikiLinks]]` with Backlink Index | ✅ | Regex Link Parser |
 | **V4 — Second Brain** | AI Chat with Your Notes Collection | ✅ | On-Device NaturalLanguage RAG |
 | **V4 — Second Brain** | Smart Daily Plan & Action Item Extraction | ✅ | NLP Task Extraction |

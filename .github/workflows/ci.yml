@@ -43,5 +43,5 @@ jobs:
 
       - name: Check binary exists
         run: |
-          ls -lh .build/release/NotesMy || ls -lh .build/arm64-apple-macosx/release/NotesMy
+          ls -lh .build/release/NotesMy || ls -lh .build/arm64-apple-macosx/release/NotesMy || ls -lh .build/apple/Products/Release/NotesMy
           echo "✅ Release binary found"

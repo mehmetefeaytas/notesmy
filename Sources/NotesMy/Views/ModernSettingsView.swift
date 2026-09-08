@@ -8,6 +8,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
     case aiSpeech = "AI & Voice"
     case hotkeys = "Shortcuts"
     case privacy = "Privacy & Data"
+    case updates = "Updates"
 
     public var id: String { rawValue }
 
@@ -19,6 +20,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .aiSpeech: return loc.text(.aiSpeechTab)
         case .hotkeys: return loc.text(.shortcutsTab)
         case .privacy: return loc.language == .turkish ? "Gizlilik & Depolama" : "Privacy & Data"
+        case .updates: return loc.language == .turkish ? "Güncellemeler" : "Updates"
         }
     }
 
@@ -29,6 +31,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .aiSpeech: return "sparkles"
         case .hotkeys: return "command"
         case .privacy: return "lock.shield"
+        case .updates: return "arrow.triangle.2.circlepath.circle"
         }
     }
 }
@@ -36,6 +39,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 public struct ModernSettingsView: View {
     @ObservedObject var store = NoteStore.shared
     @ObservedObject var loc = LocalizationService.shared
+    @ObservedObject var updater = UpdateService.shared
     @State private var selectedTab: SettingsTab = .general
 
     // Interactive Key Recorder State
@@ -70,6 +74,8 @@ public struct ModernSettingsView: View {
                         hotkeysSection
                     case .privacy:
                         privacySection
+                    case .updates:
+                        updatesSection
                     }
                 }
                 .padding(24)
@@ -158,6 +164,32 @@ public struct ModernSettingsView: View {
 
                     Toggle(loc.language == .turkish ? "Tam ekran uygulamaların ve Stage Manager'ın üzerinde göster" : "Show over full-screen apps & Stage Manager", isOn: $store.showOverFullScreen)
                         .onChange(of: store.showOverFullScreen) { _ in store.saveSettings() }
+                }
+                .padding(10)
+            }
+
+            // Software Version & Update Quick Card
+            GroupBox(loc.language == .turkish ? "Yazılım Sürümü & Güncellemeler" : "Software Version & Updates") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("NotesMy v\(updater.currentVersion)")
+                                .font(.system(size: 12, weight: .bold))
+                            statusBadge
+                        }
+                        Text(loc.language == .turkish
+                             ? "Otomatik kontrol: \(updater.autoCheckEnabled ? "Açık" : "Kapalı")"
+                             : "Auto-check: \(updater.autoCheckEnabled ? "On" : "Off")")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button(loc.language == .turkish ? "Güncellemeleri Yönet..." : "Manage Updates...") {
+                        selectedTab = .updates
+                    }
+                    .buttonStyle(.bordered)
                 }
                 .padding(10)
             }
@@ -615,6 +647,328 @@ public struct ModernSettingsView: View {
                 }
                 .padding(10)
             }
+        }
+    }
+
+    // MARK: - Software Updates Tab
+
+    private var updatesSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            headerTitle(
+                title: loc.language == .turkish ? "Yazılım Güncellemeleri" : "Software Updates",
+                subtitle: loc.language == .turkish
+                    ? "Yeni sürümleri denetleyin, otomatik güncelleme kontrolünü yönetin"
+                    : "Check for newer versions and manage automatic update checks"
+            )
+
+            // Current Version Card
+            GroupBox {
+                HStack(spacing: 16) {
+                    Image(systemName: "app.badge.fill")
+                        .font(.system(size: 38))
+                        .foregroundColor(.accentColor)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 8) {
+                            Text("NotesMy")
+                                .font(.system(size: 16, weight: .bold))
+                            Text("v\(updater.currentVersion)")
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.15))
+                                .foregroundColor(.accentColor)
+                                .cornerRadius(4)
+                        }
+
+                        Text("macOS Universal Binary (Apple Silicon & Intel 64-bit)")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    statusBadge
+                }
+                .padding(10)
+            }
+
+            // Automatic Update Check Setting
+            GroupBox(loc.language == .turkish ? "Otomatik Güncelleme Tercihleri" : "Automatic Update Preferences") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(
+                        loc.language == .turkish ? "Otomatik Güncelleme Kontrolü" : "Automatically Check for Updates",
+                        isOn: $updater.autoCheckEnabled
+                    )
+                    .font(.system(size: 13, weight: .medium))
+
+                    Text(loc.language == .turkish
+                         ? "Etkinleştirildiğinde NotesMy açılışında GitHub Releases üzerinden yeni sürümleri sessizce kontrol eder ve yeni bir sürüm çıktığında bildirim gönderir."
+                         : "When enabled, NotesMy silently queries GitHub Releases on startup and alerts you if a newer version is available.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+
+                    Divider()
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.language == .turkish ? "Son Kontrol:" : "Last Checked:")
+                                .font(.system(size: 11, weight: .medium))
+                            if let date = updater.lastCheckDate {
+                                Text(date.formatted(date: .abbreviated, time: .standard))
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text(loc.language == .turkish ? "Henüz yapılmadı" : "Never")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        Button(action: {
+                            Task {
+                                await updater.checkForUpdates(isUserInitiated: true)
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                if updater.state == .checking {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                                Text(loc.language == .turkish ? "Güncellemeleri Şimdi Denetle" : "Check for Updates Now")
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(updater.state == .checking)
+                    }
+                }
+                .padding(10)
+            }
+
+            // Status / Action Area based on state
+            switch updater.state {
+            case .idle:
+                EmptyView()
+
+            case .checking:
+                GroupBox {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .controlSize(.regular)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.language == .turkish ? "Güncellemeler Aranıyor..." : "Checking for Updates...")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("GitHub Releases API (mehmetefeaytas/notesmy)")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(10)
+                }
+
+            case .upToDate(let version):
+                GroupBox {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.language == .turkish ? "NotesMy Güncel!" : "NotesMy is Up to Date!")
+                                .font(.system(size: 13, weight: .bold))
+                            Text(loc.language == .turkish
+                                 ? "Şu an en son sürümü (v\(version)) kullanıyorsunuz."
+                                 : "You are currently running the latest release (v\(version)).")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(10)
+                }
+
+            case .updateAvailable(let release):
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 22))
+                                .foregroundColor(.purple)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(loc.language == .turkish ? "🎉 Yeni Sürüm Mevcut: v\(release.version)" : "🎉 New Version Available: v\(release.version)")
+                                    .font(.system(size: 14, weight: .bold))
+                                if let published = release.publishedAt {
+                                    Text("\(release.displayTitle) • \(published.prefix(10))")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                        }
+
+                        if let body = release.body, !body.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(loc.language == .turkish ? "Sürüm Notları:" : "Release Notes:")
+                                    .font(.system(size: 11, weight: .semibold))
+                                ScrollView {
+                                    Text(body)
+                                        .font(.system(size: 11))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(8)
+                                        .background(Color(nsColor: .controlBackgroundColor))
+                                        .cornerRadius(6)
+                                }
+                                .frame(maxHeight: 120)
+                            }
+                        }
+
+                        HStack(spacing: 10) {
+                            Button(action: {
+                                Task {
+                                    await updater.downloadAndInstall(release: release)
+                                }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.down.circle.fill")
+                                    Text(loc.language == .turkish ? "Şimdi İndir & Kur (DMG)" : "Download & Install Now (DMG)")
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.accentColor)
+
+                            Button(action: {
+                                updater.openReleasePage(release: release)
+                            }) {
+                                Text(loc.language == .turkish ? "GitHub'da Aç" : "View on GitHub")
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString("brew upgrade --cask notesmy", forType: .string)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("brew upgrade")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .help(loc.language == .turkish ? "Homebrew güncelleme komutunu panoya kopyala" : "Copy Homebrew upgrade command")
+                        }
+                    }
+                    .padding(10)
+                }
+
+            case .downloading(let progress):
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text(loc.language == .turkish ? "Yeni Sürüm İndiriliyor..." : "Downloading Update...")
+                                .font(.system(size: 13, weight: .semibold))
+                            Spacer()
+                            Text(String(format: "%.0f%%", progress * 100))
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        }
+
+                        ProgressView(value: progress)
+                            .progressViewStyle(.linear)
+
+                        HStack {
+                            Text(loc.language == .turkish ? "İndirme tamamlandığında DMG otomatik olarak açılacaktır." : "The DMG will open automatically once download finishes.")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button(loc.language == .turkish ? "İptal" : "Cancel") {
+                                updater.cancelDownload()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(10)
+                }
+
+            case .readyToInstall(let dmgURL, let version):
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.green)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(loc.language == .turkish ? "NotesMy v\(version) İndirildi!" : "NotesMy v\(version) Downloaded!")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text(loc.language == .turkish
+                                     ? "DMG kalıbı bağlandı ve Finder'da açıldı. NotesMy.app'i Uygulamalar klasörünüze taşıyarak güncellemeyi tamamlayabilirsiniz."
+                                     : "DMG is mounted and revealed in Finder. Drag NotesMy.app to your Applications folder to complete the update.")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        HStack {
+                            Button(loc.language == .turkish ? "Dosyayı Finder'da Göster" : "Show File in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([dmgURL])
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding(10)
+                }
+
+            case .error(let message):
+                GroupBox {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.red)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.language == .turkish ? "Güncelleme Kontrolü Başarısız" : "Update Check Failed")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(message)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button(loc.language == .turkish ? "Tekrar Dene" : "Retry") {
+                            Task { await updater.checkForUpdates(isUserInitiated: true) }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    .padding(10)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        switch updater.state {
+        case .upToDate:
+            Label(loc.language == .turkish ? "Güncel" : "Up to Date", systemImage: "checkmark.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.green)
+        case .updateAvailable:
+            Label(loc.language == .turkish ? "Yeni Sürüm Var" : "Update Available", systemImage: "arrow.up.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.orange)
+        case .checking:
+            Label(loc.language == .turkish ? "Kontrol Ediliyor..." : "Checking...", systemImage: "arrow.triangle.2.circlepath")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.blue)
+        case .downloading:
+            Label(loc.language == .turkish ? "İndiriliyor..." : "Downloading...", systemImage: "arrow.down.circle")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.blue)
+        default:
+            EmptyView()
         }
     }
 

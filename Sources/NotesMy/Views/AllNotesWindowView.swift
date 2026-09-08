@@ -17,6 +17,7 @@ public struct AllNotesWindowView: View {
     @State private var showWebClipAlert: Bool = false
     @State private var webClipURLText: String = ""
     @State private var showStaleBanner: Bool = true
+    @State private var keyMonitor: Any? = nil
 
     @ObservedObject var cloudKit = CloudKitSyncService.shared
 
@@ -91,7 +92,7 @@ public struct AllNotesWindowView: View {
             case .list:
                 NavigationSplitView {
                     sidebarContent
-                        .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 440)
+                        .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 480)
                 } detail: {
                     detailContent
                 }
@@ -219,6 +220,12 @@ public struct AllNotesWindowView: View {
                 }
             }
         }
+        .onAppear {
+            setupKeyMonitor()
+        }
+        .onDisappear {
+            removeKeyMonitor()
+        }
     }
 
     // MARK: - Sidebar
@@ -268,32 +275,65 @@ public struct AllNotesWindowView: View {
                 .padding(.horizontal, 12)
             }
 
-            // Segmented Filter Picker (Active, Favorites, Pinned, Tasks, Archived, All)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(NoteFilter.allCases) { filter in
-                        Button(action: { selectedFilter = filter }) {
-                            Text(filter.title(loc: loc))
-                                .font(.system(size: 11, weight: selectedFilter == filter ? .bold : .regular))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(selectedFilter == filter ? Color.accentColor.opacity(0.18) : Color.clear)
-                                .foregroundColor(selectedFilter == filter ? Color.accentColor : Color.secondary)
-                                .cornerRadius(6)
+            // Segmented Filter Picker (Active, Favorites, Pinned, Tasks, Archived, All) with chevrons
+            HStack(spacing: 2) {
+                Button(action: { selectPreviousFilter() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Önceki Filtre (⌥←)" : "Previous Filter (⌥←)")
+
+                ScrollViewReader { filterProxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 4) {
+                            ForEach(NoteFilter.allCases) { filter in
+                                Button(action: { selectedFilter = filter }) {
+                                    Text(filter.title(loc: loc))
+                                        .font(.system(size: 11, weight: selectedFilter == filter ? .bold : .regular))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(selectedFilter == filter ? Color.accentColor.opacity(0.18) : Color.clear)
+                                        .foregroundColor(selectedFilter == filter ? Color.accentColor : Color.secondary)
+                                        .cornerRadius(6)
+                                }
+                                .buttonStyle(.plain)
+                                .id(filter)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 4)
+                    }
+                    .onChange(of: selectedFilter) { newFilter in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            filterProxy.scrollTo(newFilter, anchor: .center)
+                        }
                     }
                 }
-                .padding(.horizontal, 10)
-            }
 
-            // Categories Filter Bar with Header & Add Button
+                Button(action: { selectNextFilter() }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Sonraki Filtre (⌥→)" : "Next Filter (⌥→)")
+            }
+            .padding(.horizontal, 6)
+
+            // Categories Filter Bar with Header, Navigation Chevrons & Add Button
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(loc.language == .turkish ? "Kategoriler" : "Categories")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)
+
+                    Text(loc.language == .turkish ? "• ← / → ile kaydır" : "• ← / → to scroll")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary.opacity(0.7))
 
                     Spacer()
 
@@ -314,18 +354,49 @@ public struct AllNotesWindowView: View {
                 }
                 .padding(.horizontal, 12)
 
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 5) {
-                        let totalCount = store.notes.filter { selectedFilter == .archived ? $0.isArchived : !$0.isArchived }.count
-                        categoryButton(title: "All", count: totalCount)
-                        ForEach(store.categories, id: \.self) { cat in
-                            let catCount = store.notes.filter { $0.category == cat && (selectedFilter == .archived ? $0.isArchived : !$0.isArchived) }.count
-                            categoryButton(title: cat, count: catCount)
+                HStack(spacing: 2) {
+                    Button(action: { selectPreviousCategory() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .padding(4)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.language == .turkish ? "Önceki Kategori (←)" : "Previous Category (←)")
+
+                    ScrollViewReader { catProxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 5) {
+                                let totalCount = store.notes.filter { selectedFilter == .archived ? $0.isArchived : !$0.isArchived }.count
+                                categoryButton(title: "All", count: totalCount)
+                                    .id("All")
+
+                                ForEach(store.categories, id: \.self) { cat in
+                                    let catCount = store.notes.filter { $0.category == cat && (selectedFilter == .archived ? $0.isArchived : !$0.isArchived) }.count
+                                    categoryButton(title: cat, count: catCount)
+                                        .id(cat)
+                                }
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 3)
+                        }
+                        .onChange(of: selectedCategory) { newCat in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                catProxy.scrollTo(newCat, anchor: .center)
+                            }
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 3)
+
+                    Button(action: { selectNextCategory() }) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .padding(4)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.language == .turkish ? "Sonraki Kategori (→)" : "Next Category (→)")
                 }
+                .padding(.horizontal, 6)
             }
 
             // Color Filter Pills
@@ -710,6 +781,83 @@ public struct AllNotesWindowView: View {
             selectedNoteId = currentFiltered.first?.id
         } else if selectedNoteId == nil {
             selectedNoteId = currentFiltered.first?.id
+        }
+    }
+
+    // MARK: - Keyboard Arrow Navigation & Scrolling
+
+    public func selectPreviousCategory() {
+        let allCategories = ["All"] + store.categories
+        guard let currentIdx = allCategories.firstIndex(of: selectedCategory) else {
+            selectedCategory = "All"
+            return
+        }
+        let prevIdx = (currentIdx - 1 + allCategories.count) % allCategories.count
+        selectedCategory = allCategories[prevIdx]
+    }
+
+    public func selectNextCategory() {
+        let allCategories = ["All"] + store.categories
+        guard let currentIdx = allCategories.firstIndex(of: selectedCategory) else {
+            selectedCategory = "All"
+            return
+        }
+        let nextIdx = (currentIdx + 1) % allCategories.count
+        selectedCategory = allCategories[nextIdx]
+    }
+
+    public func selectPreviousFilter() {
+        let allFilters = NoteFilter.allCases
+        guard let currentIdx = allFilters.firstIndex(of: selectedFilter) else { return }
+        let prevIdx = (currentIdx - 1 + allFilters.count) % allFilters.count
+        selectedFilter = allFilters[prevIdx]
+    }
+
+    public func selectNextFilter() {
+        let allFilters = NoteFilter.allCases
+        guard let currentIdx = allFilters.firstIndex(of: selectedFilter) else { return }
+        let nextIdx = (currentIdx + 1) % allFilters.count
+        selectedFilter = allFilters[nextIdx]
+    }
+
+    private func setupKeyMonitor() {
+        if keyMonitor != nil { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [self] event in
+            // Don't intercept if user is actively typing in a text field
+            if let responder = NSApp.keyWindow?.firstResponder {
+                if responder is NSTextView || responder is NSTextField {
+                    return event
+                }
+            }
+
+            // Left Arrow (123)
+            if event.keyCode == 123 {
+                if event.modifierFlags.contains(.shift) || event.modifierFlags.contains(.option) {
+                    selectPreviousFilter()
+                } else {
+                    selectPreviousCategory()
+                }
+                return nil
+            }
+
+            // Right Arrow (124)
+            if event.keyCode == 124 {
+                if event.modifierFlags.contains(.shift) || event.modifierFlags.contains(.option) {
+                    selectNextFilter()
+                } else {
+                    selectNextCategory()
+                }
+                return nil
+            }
+
+            return event
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
         }
     }
 }

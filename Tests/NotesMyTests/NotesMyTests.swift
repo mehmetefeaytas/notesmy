@@ -295,4 +295,40 @@ struct NotesMyTests {
         // Cleanup
         store.deleteNote(id: oldNote.id)
     }
+
+    @Test("UpdateService semantic version comparisons")
+    func testUpdateServiceVersionComparison() {
+        #expect(UpdateService.isVersion("1.6.3", higherThan: "1.6.2") == true)
+        #expect(UpdateService.isVersion("v1.7.0", higherThan: "1.6.9") == true)
+        #expect(UpdateService.isVersion("2.0.0", higherThan: "1.9.9") == true)
+        #expect(UpdateService.isVersion("1.6.2", higherThan: "1.6.2") == false)
+        #expect(UpdateService.isVersion("1.6.1", higherThan: "1.6.2") == false)
+        #expect(UpdateService.isVersion("1.6.2.1", higherThan: "1.6.2") == true)
+    }
+
+    @Test("AppReleaseInfo decoding and DMG asset discovery")
+    func testReleaseDecoding() throws {
+        let json = """
+        {
+            "id": 998877,
+            "tag_name": "v1.7.0",
+            "name": "NotesMy 1.7.0",
+            "body": "Added automatic update checks and fast installer.",
+            "html_url": "https://github.com/mehmetefeaytas/notesmy/releases/tag/v1.7.0",
+            "published_at": "2026-09-08T20:00:00Z",
+            "assets": [
+                {
+                    "name": "NotesMy-1.7.0.dmg",
+                    "browser_download_url": "https://github.com/mehmetefeaytas/notesmy/releases/download/v1.7.0/NotesMy-1.7.0.dmg",
+                    "size": 18000000
+                }
+            ]
+        }
+        """.data(using: .utf8)!
+
+        let release = try JSONDecoder().decode(AppReleaseInfo.self, from: json)
+        #expect(release.version == "1.7.0")
+        #expect(release.displayTitle == "NotesMy 1.7.0")
+        #expect(release.dmgDownloadURL?.absoluteString == "https://github.com/mehmetefeaytas/notesmy/releases/download/v1.7.0/NotesMy-1.7.0.dmg")
+    }
 }

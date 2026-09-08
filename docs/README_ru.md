@@ -1,86 +1,236 @@
-# 🇷🇺 NotesMy — Второй Мозг и Заметки с ИИ для macOS
+# 🇷🇺 NotesMy — ИИ Второй Мозг и Заметки у Края Экрана для macOS
 
 <p align="center">
-  [🇬🇧 English](../README.md) · [🇹🇷 Türkçe](README_tr.md) · [🇩🇪 Deutsch](README_de.md) · [🇫🇷 Français](README_fr.md) · [🇪🇸 Español](README_es.md) · [🇧🇷 Português](README_pt.md) · [🇮🇹 Italiano](README_it.md) · [🇷🇺 Русский](README_ru.md) · [🇯🇵 日本語](README_ja.md) · [🇰🇷 한국어](README_ko.md) · [🇸🇦 العربية](README_ar.md) · [🇨🇳 中文](README_zh.md)
+  <img src="../assets/app_icon_1024.png" alt="NotesMy App Icon" width="128" height="128" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);" />
+</p>
+
+<h2 align="center">Мгновенные всплывающие заметки у края дисплея и система управления знаниями для macOS</h2>
+
+<p align="center">
+  <a href="../README.md">🇬🇧 English</a> · 
+  <a href="README_tr.md">🇹🇷 Türkçe</a> · 
+  <a href="README_de.md">🇩🇪 Deutsch</a> · 
+  <a href="README_fr.md">🇫🇷 Français</a> · 
+  <a href="README_es.md">🇪🇸 Español</a> · 
+  <a href="README_pt.md">🇧🇷 Português</a> · 
+  <a href="README_it.md">🇮🇹 Italiano</a> · 
+  <strong>[🇷🇺 Русский](README_ru.md)</strong> · 
+  <a href="README_ja.md">🇯🇵 日本語</a> · 
+  <a href="README_ko.md">🇰🇷 한국어</a> · 
+  <a href="README_ar.md">🇸🇦 العربية</a> · 
+  <a href="README_zh.md">🇨🇳 中文</a>
 </p>
 
 <p align="center">
-  <img src="../assets/hero_banner.jpg" alt="NotesMy Hero Banner" width="100%" />
+  <a href="https://github.com/mehmetefeaytas/notesmy/releases"><img src="https://img.shields.io/github/v/release/mehmetefeaytas/notesmy?style=for-the-badge&color=8B5CF6" alt="Release" /></a>
+  <a href="https://github.com/mehmetefeaytas/homebrew-tap"><img src="https://img.shields.io/badge/Homebrew-Cask%20Доступен-orange?style=for-the-badge&logo=homebrew" alt="Homebrew" /></a>
+  <img src="https://img.shields.io/badge/macOS-13.0%2B-blue?style=for-the-badge&logo=apple" alt="macOS 13+" />
+  <img src="https://img.shields.io/badge/Swift-6.0-F05138?style=for-the-badge&logo=swift" alt="Swift 6" />
+  <img src="https://img.shields.io/badge/Архитектура-Universal%20(ARM64%20%2B%20x86__64)-green?style=for-the-badge" alt="Universal Binary" />
+  <img src="https://img.shields.io/badge/Приватность-100%25%20Локально%20на%20устройстве-success?style=for-the-badge" alt="Приватность" />
+  <img src="https://img.shields.io/badge/Лицензия-Apache%202.0-yellow?style=for-the-badge" alt="Apache 2.0" />
 </p>
 
-<p align="center">
-  <strong>Умные заметки у края экрана, граф знаний, многоязычные голосовые заметки и локальный ИИ без интернета</strong>
-</p>
+---
+
+## 🎬 Видеодемонстрация работы
 
 <p align="center">
-  <a href="https://github.com/mehmetefeaytas/notesmy/releases"><img src="https://img.shields.io/github/v/release/mehmetefeaytas/notesmy?style=flat-square&color=8B5CF6" alt="Release" /></a>
-  <img src="https://img.shields.io/badge/macOS-13.0%2B-blue?style=flat-square&logo=apple" alt="macOS 13+" />
-  <img src="https://img.shields.io/badge/Swift-6.0-F05138?style=flat-square&logo=swift" alt="Swift 6" />
-  <img src="https://img.shields.io/badge/Arch-Universal%20(ARM64%20%2B%20x86__64)-green?style=flat-square" alt="Universal" />
-  <img src="https://img.shields.io/badge/License-Apache%202.0-yellow?style=flat-square" alt="License" />
-  <img src="https://img.shields.io/badge/Privacy-100%25%20On--Device-success?style=flat-square" alt="Privacy" />
+  <img src="../assets/demo.gif" alt="NotesMy Живая демонстрация" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.25);" />
 </p>
+<p align="center">
+  <em>Запись экрана в высоком разрешении: плавное появление из-за края монитора, мгновенный ввод заметок, интерактивная доска и мгновенный OCR-захват текста. (<a href="../assets/demo.mp4">Скачать MP4 60fps</a>)</em>
+</p>
+
+---
+
+## ⚡ Что такое NotesMy?
+
+**NotesMy** — это сверхбыстрое нативное приложение для macOS, сочетающее мгновенный доступ к заметкам-стикерам (*Unclutter*, *SideNotes*) с мощью структурированных баз знаний (*Obsidian*, *Apple Notes*).
+
+Созданное на 100% с помощью **Swift 6, SwiftUI и AppKit**, приложение тихо ожидает в строке меню и бесшумно выдвигается при наведении курсора на край экрана или нажатии горячей клавиши.
+
+### ✨ Ключевые возможности
+
+- 🪟 **Выдвижная панель у края экрана (Edge Deck):** Наведите курсор на границу дисплея, чтобы развернуть интерактивный веер ваших заметок.
+- 🔄 **Встроенные автообновления:** Проверка релизов GitHub прямо в Настройках, журнал изменений, индикатор загрузки DMG и установка в 1 клик.
+- ⌨️ **Навигация клавишами со стрелками:** Быстрое переключение категорий и тегов с помощью стрелок (`←` / `→`) и кнопок прокрутки.
+- 🗑️ **Быстрое удаление и очистка старых записей:** Удаление в один клик прямо на карточке; автоматический поиск и архивация заметок, не открывавшихся более 30 дней.
+- ⚙️ **Безопасное закрытие окон:** Красная кнопка настроек никогда не завершает работу приложения; двухэтапное подтверждение сброса данных.
+- 🧠 **ИИ Граф знаний с физической моделью:** Симуляция Кулона-Гука, семантическая близость Жаккара, двусторонние ссылки `[[WikiLinks]]` и сплошные яркие цветные линии связей при выборе узлов.
+- 🔍 **OCR и распознавание текста с экрана:** Выделите любую область экрана, чтобы скопировать текст в буфер или добавить в заметку через Apple Vision.
+- 🎙️ **Локальные голосовые заметки:** Распознавание речи в реальном времени на 12 языках без задержек и утечек данных.
+- 📌 **Свободная доска (Sticky Board):** Размещайте заметки на бесконечном масштабируемом холсте в виде цветных карточек.
+- 🎨 **Минималистичная пастельная палитра:** 6 приятных оттенков для macOS, поддержка Markdown, списки задач и подсветка кода.
+- 🛡️ **Без телеметрии и 100% офлайн:** Никаких удаленных серверов, облачных учеток или трекеров. Все нейросети работают на вашем Mac.
 
 ---
 
 ## 🍺 Установка через Homebrew
 
+Самый удобный способ установки и получения обновлений на macOS:
+
 ```bash
-# Tap the repository
+# 1. Подключить репозиторий
 brew tap mehmetefeaytas/tap
 
-# Install NotesMy
+# 2. Установить NotesMy
 brew install --cask notesmy
 ```
 
-### Direct Download (.dmg)
-You can also download the precompiled **Universal DMG** directly from [GitHub Releases](https://github.com/mehmetefeaytas/notesmy/releases/latest).
+### Обновление
+```bash
+brew upgrade --cask notesmy
+```
+
+### Ручная установка (DMG)
+Хотите скачать готовый образ DMG Universal? Перейдите на страницу [GitHub Releases](https://github.com/mehmetefeaytas/notesmy/releases/latest).
+
+> **Предупреждение Gatekeeper (Первый запуск):** Поскольку NotesMy распространяется как проект с открытым кодом, macOS может показать предупреждение о неизвестном разработчике. Нажмите правой кнопкой мыши на `NotesMy.app` в папке `/Applications` и выберите **Открыть**, либо выполните команду в Терминале:
+> ```bash
+> xattr -cr /Applications/NotesMy.app
+> ```
 
 ---
 
-## ✨ Ключевые Возможности
+## 📸 Скриншоты интерфейса
 
 <table width="100%">
   <tr>
-    <td width="50%"><img src="../assets/feature_notes.jpg" alt="Notes" width="100%" /></td>
-    <td width="50%"><img src="../assets/feature_ai.jpg" alt="AI Second Brain" width="100%" /></td>
+    <td width="50%">
+      <h3 align="center">🗂️ Все заметки и семантический поиск</h3>
+      <img src="../assets/preview-allnotes.png" alt="Окно Все заметки NotesMy" width="100%" />
+    </td>
+    <td width="50%">
+      <h3 align="center">🪟 Выдвижная панель у края экрана</h3>
+      <img src="../assets/preview-edge-deck.png" alt="NotesMy Edge Deck" width="100%" />
+    </td>
   </tr>
   <tr>
-    <td width="50%"><img src="../assets/feature_voice.jpg" alt="Voice Transcription" width="100%" /></td>
-    <td width="50%"><img src="../assets/feature_board.jpg" alt="Sticky Board" width="100%" /></td>
+    <td width="50%">
+      <h3 align="center">📝 Минималистичный редактор</h3>
+      <img src="../assets/preview-note.png" alt="Редактор заметок" width="100%" />
+    </td>
+    <td width="50%">
+      <h3 align="center">🎨 Современная пастельная иконка</h3>
+      <img src="../assets/app_icon_1024.png" alt="Иконка NotesMy" width="60%" style="display: block; margin: 0 auto;" />
+    </td>
   </tr>
 </table>
 
-- **🪟 Edge-Docked Deck (Unclutter & SideNotes Inspired):** Hover over the screen edge to reveal notes instantly.
-- **🧠 AI Second Brain & Knowledge Graph:** Interactive node graph visualizing bidirectional `[[WikiLinks]]` connections.
-- **🎙️ Multilingual Voice Notes:** Real-time speech transcription with 12 language support via `SFSpeechRecognizer`.
-- **📸 Screenshot Capture & Vision OCR:** Take interactive screen captures and extract text using Apple Vision.
-- **📅 Calendar Integration:** One-click `.ics` export with Apple Calendar, Google Calendar, and Outlook support.
-- **🔒 100% On-Device & Zero Telemetry:** No cloud accounts required, no trackers, strict local JSON storage.
+---
+
+## 💎 Полная таблица возможностей
+
+| Уровень | Функция | Статус | Технология |
+| :--- | :--- | :---: | :--- |
+| **V1 — Базовый** | Текстовые заметки и чек-листы в пастельных тонах | ✅ | Нативный SwiftUI TextEditor |
+| **V1 — Базовый** | Выдвижная панель-веер у края дисплея | ✅ | Плавающее окно AppKit NSPanel |
+| **V1 — Базовый** | Теги, категории, закрепление и избранное | ✅ | Локальное хранилище JSON |
+| **V1 — Базовый** | Навигация стрелками (`←` / `→`) по категориям | ✅ | AppKit Event Monitor + ScrollViewReader |
+| **V1 — Базовый** | Быстрое удаление прямо на карточке заметки | ✅ | Обработчик событий Swift |
+| **V1 — Базовый** | История буфера обмена с автозахватом текста | ✅ | NSPasteboard Monitor |
+| **V1 — Базовый** | Интерактивный выбор цвета и изменение размеров | ✅ | AppKit NSWindow + SwiftUI |
+| **V2 — Расширенный**| Голосовые заметки на 12 языках (распознавание речи) | ✅ | Apple SFSpeechRecognizer |
+| **V2 — Расширенный**| Оптическое распознавание OCR со снимка экрана | ✅ | Apple Vision + screencapture |
+| **V2 — Расширенный**| Свободная интерактивная доска заметок | ✅ | SwiftUI Canvas с Drag & Drop |
+| **V2 — Расширенный**| Автоматическая очистка старых заметок (>30 дней) | ✅ | Детектор устаревания данных |
+| **V2 — Расширенный**| Умное определение дат и напоминаний в тексте | ✅ | NSDataDetector + UserNotifications |
+| **V2 — Расширенный**| Семантический поиск по векторным эмбеддингам | ✅ | Apple NaturalLanguage Embeddings |
+| **V3 — Интеграция** | Встроенная проверка релизов и автообновление | ✅ | GitHub REST API + URLSession |
+| **V3 — Интеграция** | Веб-клиппер ссылок с автоматической выжимкой | ✅ | WebKit + URLSession |
+| **V3 — Интеграция** | Экспорт событий в календарь (.ics) в один клик | ✅ | Генератор стандарта RFC 5545 |
+| **V3 — Интеграция** | Экспорт в Apple Заметки и Напоминания | ✅ | NSSharingService + EventKit |
+| **V3 — Интеграция** | Синхронизация CloudKit и локальные бэкапы | ✅ | Контейнер Apple CloudKit |
+| **V3 — Интеграция** | История версий и возврат к предыдущим состояниям | ✅ | Инкрементальные снимки |
+| **V4 — Второй Мозг** | Граф знаний с физической моделью Кулона-Гука | ✅ | Математическая физика + Canvas |
+| **V4 — Второй Мозг** | Яркие сплошные цветные линии связей при выборе | ✅ | Векторные пути SwiftUI |
+| **V4 — Второй Мозг** | Двусторонние связи `[[WikiLinks]]` с индексом ссылок | ✅ | Парсер регулярных выражений |
+| **V4 — Второй Мозг** | Локальный ИИ-чат по всему массиву заметок | ✅ | Архитектура RAG на базе NaturalLanguage |
+| **V4 — Второй Мозг** | Формирование плана дня и извлечение задач | ✅ | NLP-анализатор задач |
+| **V4 — Второй Мозг** | Структурирование мыслей и автоформатирование | ✅ | Движок Apple Intelligence NLP |
 
 ---
 
-## ⌨️ Глобальные Горячие Клавиши
+## 🌍 Поддерживаемые языки (12 языков)
 
-| Shortcut | Action |
-| :--- | :--- |
-| `⌥⌘N` | New Sticky Note |
-| `⌥⌘V` | Quick Capture from Clipboard |
-| `⌥⌘L` | All Notes & Semantic Search |
-| `⌥⌘B` | Open Sticky Board Canvas |
-| `⌥⌘A` | Open Archive |
-| `⌃⌥⌘H` | Toggle Edge Deck Visibility |
-| `⌘[` / `⌘]` | Navigate Previous / Next Note |
-| `Esc` | Close Active Note Window |
+NotesMy автоматически определяет язык операционной системы macOS и поддерживает локализацию и распознавание голоса:
+
+| Флаг | Язык | Флаг | Язык | Флаг | Язык |
+| :---: | :--- | :---: | :--- | :---: | :--- |
+| 🇬🇧 | English | 🇹🇷 | Türkçe | 🇩🇪 | Deutsch |
+| 🇫🇷 | Français | 🇪🇸 | Español | 🇧🇷 | Português (Бразилия) |
+| 🇮🇹 | Italiano | 🇷🇺 | Русский | 🇯🇵 | 日本語 |
+| 🇰🇷 | 한국어 | 🇸🇦 | العربية (RTL) | 🇨🇳 | 简体中文 |
 
 ---
 
-## 🤝 Участие в разработке и политика релизов
+## ⌨️ Глобальные горячие клавиши
 
-Приветствуются улучшения и сообщения об ошибках! Публикация официальных релизов доступна исключительно мейнтейнеру ([@mehmetefeaytas](https://github.com/mehmetefeaytas)). Подробнее в [CONTRIBUTING.md](../CONTRIBUTING.md).
+Вы можете настроить любые комбинации в меню **Настройки → Сочетания клавиш**:
+
+| Сочетание | Действие | Описание |
+| :--- | :--- | :--- |
+| `⌥⌘N` | **Новая заметка** | Создает плавающее окно заметки на активном экране |
+| `⌥⌘V` | **Быстрый захват** | Преобразует текст из буфера обмена в новую заметку |
+| `⌥⌘L` | **Все заметки** | Открывает главное окно управления и поиска |
+| `⌥⌘B` | **Доска заметок** | Открывает свободный холст с карточками |
+| `⌥⌘A` | **Архив** | Показывает список заархивированных записей |
+| `⌃⌥⌘H` | **Скрыть/показать панель** | Показывает или прячет боковую шторку |
+| `Esc` | **Закрыть заметку** | Закрывает активное окно редактора |
 
 ---
 
-## 📄 License
+## 📈 История популярности (Звезды)
 
-NotesMy is licensed under the **Apache License 2.0**.
+[![Star History Chart](https://api.star-history.com/svg?repos=mehmetefeaytas/notesmy&type=Date)](https://star-history.com/#mehmetefeaytas/notesmy&Date)
+
+---
+
+## 👥 Контрибьюторы
+
+Мы всегда рады вашим отзывам, идеям новых функций и отчетам об ошибках!
+
+<a href="https://github.com/mehmetefeaytas/notesmy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=mehmetefeaytas/notesmy" alt="Контрибьюторы" />
+</a>
+
+Ознакомьтесь с [CONTRIBUTING.md](../CONTRIBUTING.md) для получения инструкций по разработке и тестированию.
+
+---
+
+## 💖 Спонсорство и поддержка
+
+Если NotesMy делает вашу работу за Mac продуктивнее, вы можете поддержать развитие проекта:
+
+<p align="center">
+  <a href="https://github.com/sponsors/mehmetefeaytas"><img src="https://img.shields.io/badge/GitHub%20Sponsors-Поддержать-EA4AAA?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors" /></a>
+  &nbsp;&nbsp;
+  <a href="https://buymeacoffee.com/mehmetefeaytas"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Угостить%20кофе-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
+</p>
+
+---
+
+## 📬 Контакты и связь
+
+Для связи, предложений и сотрудничества:
+
+- 📧 **Эл. почта:** [efeyapiyor@gmail.com](mailto:efeyapiyor@gmail.com)
+- 💼 **LinkedIn:** [Mehmet Efe Aytaş](https://linkedin.com/in/mehmetefeaytas)
+- 🐙 **GitHub:** [@mehmetefeaytas](https://github.com/mehmetefeaytas)
+
+---
+
+## 🛡️ Безопасность и архитектура
+
+- **Полностью офлайн:** NotesMy не делает никаких внешних сетевых запросов. Без телеметрии и трекеров.
+- **Локальные файлы:** Ваши данные сохранены в обычном JSON-файле: `~/Library/Application Support/NotesMy/notes.json`.
+- **Синхронизация CloudKit:** При включении работает исключительно через личное защищенное хранилище iCloud.
+
+---
+
+## 📄 Лицензия
+
+NotesMy распространяется под лицензией **Apache License 2.0**. Подробности в файле [LICENSE](../LICENSE).
+
+Создано с ❤️ автором **[Mehmet Efe Aytaş](https://github.com/mehmetefeaytas)**.

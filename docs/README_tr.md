@@ -53,9 +53,11 @@ Tamamen yerel **Swift 6, SwiftUI ve AppKit** ile geliştirilen NotesMy, menü ç
 ### ✨ Öne Çıkan Yetenekler
 
 - 🪟 **Ekran Kenarı Çekmecesi:** Ekranın sağına/soluna yanaştığınızda yelpaze şeklinde açılan canlı not kartları.
+- 🔄 **Uygulama İçi Otomatik Güncelleme:** Ayarlar içerisinden doğrudan GitHub Releases sürüm kontrolü, değişiklik günlüğü (changelog), DMG indirme ilerleme çubuğu ve tek tıkla güncelleme.
+- ⌨️ **Klavye Ok Tuşlarıyla Kategori Gezintisi:** Sol/sağ ok tuşlarıyla (`←` / `→`) veya tıklanabilir butonlarla kategoriler ve filtreler arasında pürüzsüz yatay geçiş.
 - 🗑️ **Hızlı Not Silme & Kullanılmayan Notları Temizleme:** Not kartı üzerinden tek tıkla hızlı silme; 30 günden uzun süredir dokunulmayan eski notları otomatik tespit edip toplu arşivleme/silme teklifi.
 - 🛡️ **Güvenli Pencere Yönetimi:** Ayarlar penceresi kapatıldığında uygulamanın kapanmaması güvencesi ve kazara veri kaybını önleyen 2 aşamalı onaylı not sıfırlama sistemi.
-- 🧠 **Yapay Zeka İkinci Beyin & Bağlantı Ağı:** Çift yönlü `[[WikiLinks]]` bağlantıları, notlarınızla sohbet edebilen yerel yapay zeka ve interaktif bilgi grafiği (Knowledge Graph).
+- 🧠 **Matematiksel & Yapay Zeka Destekli Bağlantı Ağı:** Coulomb-Hooke fizik simülasyonu, Jaccard kavram benzerliği, çift yönlü `[[WikiLinks]]` ve seçilen notta parlayan canlı renkli düz bağlantı çizgileri.
 - 🔍 **Ekrandan Metin Yakalama (OCR):** Ekranın dilediğiniz bir bölgesini seçerek görüntüdeki yazıları Apple Vision ile anında kopyalama.
 - 🎙️ **Çok Dilli Sesli Notlar:** Apple Silicon NPU hızlandırmalı, 12 dilde anlık ses transkripti.
 - 📌 **Mantar Pano (Sticky Board):** Serbestçe sürüklenebilen ve yakınlaştırılabilen yapışkan not tuvali.
@@ -115,6 +117,51 @@ Doğrudan Universal DMG dosyasını indirmek isterseniz [GitHub Releases](https:
     </td>
   </tr>
 </table>
+
+---
+
+## 💎 Kapsamlı Özellik Tablosu
+
+| Aşama | Özellik | Durum | Teknoloji |
+| :--- | :--- | :---: | :--- |
+| **V1 — Temel** | Pastel temalı metin ve kontrol listesi (checklist) notları | ✅ | Yerel SwiftUI TextEditor |
+| **V1 — Temel** | Ekran kenarına sabitlenen yelpaze kart çekmecesi | ✅ | AppKit Yüzen NSPanel |
+| **V1 — Temel** | Etiketler, Kategoriler, Sabitleme ve Favoriler | ✅ | Yerel JSON Depolama |
+| **V1 — Temel** | Klavye Ok Tuşlarıyla (`←` / `→`) Kategoriler Arası Gezinme | ✅ | AppKit Event Monitor + ScrollViewReader |
+| **V1 — Temel** | Not Kartı Üzerinden Anında Hızlı Silme | ✅ | Swift Action Handler |
+| **V1 — Temel** | Pano Geçmişi Merkezi (Otomatik Metin Yakalama) | ✅ | NSPasteboard Monitor |
+| **V1 — Temel** | İnteraktif Renk Seçici ve Boyutlandırılabilir Pencereler | ✅ | AppKit NSWindow + SwiftUI |
+| **V2 — Gelişmiş** | 12 Dilde Sesli Notlar (Anlık Yazıya Dökme) | ✅ | Apple SFSpeechRecognizer |
+| **V2 — Gelişmiş** | Ekran Kırpma ile Anında Metin Okuma (Vision OCR) | ✅ | Apple Vision + screencapture |
+| **V2 — Gelişmiş** | İnteraktif Serbest Mantar Pano Tuvali | ✅ | SwiftUI Sürükle & Bırak Canvas |
+| **V2 — Gelişmiş** | 30 Günden Eski Notları Otomatik Temizleme & Arşivleme | ✅ | Akıllı Zaman Aşımı Motoru |
+| **V2 — Gelişmiş** | Doğal Dil Akıllı Tarih & Hatırlatıcı Bildirimleri | ✅ | NSDataDetector + UserNotifications |
+| **V2 — Gelişmiş** | Anlamsal Vektör Araması (Semantic Search) | ✅ | Apple NaturalLanguage Gömümleri |
+| **V3 — Entegre** | Uygulama İçi Otomatik Güncelleme & GitHub Sürüm Kontrolü | ✅ | GitHub REST API + URLSession |
+| **V3 — Entegre** | Web Kırpıcı (Web Clipper) ile URL Özeti Çıkarma | ✅ | WebKit + URLSession |
+| **V3 — Entegre** | Tek Tıkla Takvim Entegrasyonu (.ics) | ✅ | RFC 5545 Takvim Üretici |
+| **V3 — Entegre** | Apple Notlar ve Anımsatıcılara Dışa Aktarma | ✅ | NSSharingService + EventKit |
+| **V3 — Entegre** | Özel CloudKit Veritabanı Eşitleme & Yerel Yedekleme | ✅ | Apple CloudKit Kapsayıcısı |
+| **V3 — Entegre** | Not Sürüm Geçmişi & Zamanda Geriye Dönüş (Restore) | ✅ | Artımlı Anlık Görüntüler |
+| **V4 — İkinci Beyin** | Fizik Tabanlı Coulomb-Hooke Yapay Zeka Bilgi Ağı | ✅ | Matematiksel Fizik + Canvas |
+| **V4 — İkinci Beyin** | Seçilen Notta Canlı Renkli Parlayan Düz Bağlantılar | ✅ | SwiftUI Vektör Grafik Çizimi |
+| **V4 — İkinci Beyin** | Çift Yönlü `[[WikiLinks]]` ve Geri Bağlantı Dizini | ✅ | Regex Bağlantı Ayrıştırıcı |
+| **V4 — İkinci Beyin** | Notlarınızla Doğal Dilde Yapay Zeka Sohbeti | ✅ | Cihaz İçi Yerel RAG Mimarisi |
+| **V4 — İkinci Beyin** | Günlük Eylem Planı ve Görev Çıkarıcı | ✅ | Doğal Dil Görev Çıkarımı |
+| **V4 — İkinci Beyin** | Dağınık Düşünceleri Temizleme & Otomatik Biçimlendirme | ✅ | Apple Intelligence NLP Motoru |
+
+---
+
+## 🌍 Desteklenen Diller (12 Dil)
+
+NotesMy sistem dilinizi otomatik algılar ve aşağıdaki dillerde tam arayüz çevirisi ve ses transkripsiyonu sunar:
+
+| Bayrak | Dil | Bayrak | Dil | Bayrak | Dil |
+| :---: | :--- | :---: | :--- | :---: | :--- |
+| 🇬🇧 | English | 🇹🇷 | Türkçe | 🇩🇪 | Deutsch |
+| 🇫🇷 | Français | 🇪🇸 | Español | 🇧🇷 | Português (Brasil) |
+| 🇮🇹 | Italiano | 🇷🇺 | Русский | 🇯🇵 | 日本語 |
+| 🇰🇷 | 한국어 | 🇸🇦 | العربية (RTL) | 🇨🇳 | 简体中文 |
 
 ---
 
