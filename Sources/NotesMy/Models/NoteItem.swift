@@ -44,6 +44,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
     public var isCodeMode: Bool
     public var isFavorite: Bool
     public var reminderDate: Date?
+    public var versions: [NoteVersion]
+    public var comments: [NoteComment]
 
     public init(
         id: UUID = UUID(),
@@ -63,7 +65,9 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         opacity: Double = 1.0,
         isCodeMode: Bool = false,
         isFavorite: Bool = false,
-        reminderDate: Date? = nil
+        reminderDate: Date? = nil,
+        versions: [NoteVersion] = [],
+        comments: [NoteComment] = []
     ) {
         self.id = id
         self.title = title
@@ -83,6 +87,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isCodeMode = isCodeMode
         self.isFavorite = isFavorite
         self.reminderDate = reminderDate
+        self.versions = versions
+        self.comments = comments
     }
 
     public init(from decoder: Decoder) throws {
@@ -105,6 +111,8 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isCodeMode = try container.decodeIfPresent(Bool.self, forKey: .isCodeMode) ?? false
         self.isFavorite = try container.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
         self.reminderDate = try container.decodeIfPresent(Date.self, forKey: .reminderDate)
+        self.versions = try container.decodeIfPresent([NoteVersion].self, forKey: .versions) ?? []
+        self.comments = try container.decodeIfPresent([NoteComment].self, forKey: .comments) ?? []
     }
 
     public var displayTitle: String {
@@ -146,5 +154,16 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
         guard !items.isEmpty else { return nil }
         let completed = items.filter { $0.isChecked }.count
         return (completed, items.count)
+    }
+
+    public var outgoingWikiLinks: [String] {
+        let pattern = "\\[\\[(.*?)\\]\\]"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let nsString = body as NSString
+        let matches = regex.matches(in: body, range: NSRange(location: 0, length: nsString.length))
+        return matches.compactMap { match in
+            guard match.numberOfRanges > 1 else { return nil }
+            return nsString.substring(with: match.range(at: 1)).trimmingCharacters(in: .whitespaces)
+        }.filter { !$0.isEmpty }
     }
 }

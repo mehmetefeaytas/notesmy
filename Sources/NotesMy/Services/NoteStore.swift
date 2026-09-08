@@ -256,6 +256,66 @@ public final class NoteStore: ObservableObject {
         }
     }
 
+    // MARK: - Version History & Snapshots
+    public func createVersionSnapshot(noteId: UUID, reason: String = "Manual Snapshot") {
+        guard let index = notes.firstIndex(where: { $0.id == noteId }) else { return }
+        let current = notes[index]
+        let snapshot = NoteVersion(
+            title: current.title,
+            body: current.body,
+            summary: reason
+        )
+        // Keep up to 25 recent versions
+        notes[index].versions.insert(snapshot, at: 0)
+        if notes[index].versions.count > 25 {
+            notes[index].versions.removeLast()
+        }
+        notes[index].updatedAt = Date()
+        saveNotes()
+    }
+
+    public func restoreVersion(noteId: UUID, versionId: UUID) {
+        guard let noteIndex = notes.firstIndex(where: { $0.id == noteId }),
+              let version = notes[noteIndex].versions.first(where: { $0.id == versionId }) else { return }
+
+        // Create a snapshot of current state before restoring
+        createVersionSnapshot(noteId: noteId, reason: "Before restoring \(version.displayDate)")
+
+        notes[noteIndex].title = version.title
+        notes[noteIndex].body = version.body
+        notes[noteIndex].updatedAt = Date()
+        saveNotes()
+    }
+
+    // MARK: - Comments & Collaboration
+    public func addComment(noteId: UUID, author: String = "Me", text: String) {
+        guard let index = notes.firstIndex(where: { $0.id == noteId }) else { return }
+        let comment = NoteComment(author: author, text: text)
+        notes[index].comments.append(comment)
+        notes[index].updatedAt = Date()
+        saveNotes()
+    }
+
+    // MARK: - Templates
+    public func applyTemplate(noteId: UUID, template: NoteTemplate, isTurkish: Bool = false) {
+        guard let index = notes.firstIndex(where: { $0.id == noteId }) else { return }
+        createVersionSnapshot(noteId: noteId, reason: "Before applying template")
+        notes[index].title = isTurkish ? template.titleTr : template.title
+        notes[index].body = isTurkish ? template.bodyTemplateTr : template.bodyTemplate
+        notes[index].category = template.category
+        notes[index].updatedAt = Date()
+        saveNotes()
+    }
+
+    // MARK: - Bidirectional Links & Backlinks
+    public func getBacklinks(for noteTitle: String) -> [NoteItem] {
+        let clean = noteTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !clean.isEmpty else { return [] }
+        return notes.filter { note in
+            !note.isArchived && note.outgoingWikiLinks.contains(where: { $0.lowercased() == clean })
+        }
+    }
+
     public func archiveNote(id: UUID) {
         if let index = notes.firstIndex(where: { $0.id == id }) {
             notes[index].isArchived = true

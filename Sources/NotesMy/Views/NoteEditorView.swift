@@ -26,6 +26,9 @@ public struct NoteEditorView: View {
     @State private var reminderDate: Date = Date().addingTimeInterval(3600)
     @State private var isRecordingVoice: Bool = false
     @State private var isPerformingOCR: Bool = false
+    @State private var showVersionHistory: Bool = false
+    @State private var showTemplatePicker: Bool = false
+    @State private var showPencilDrawing: Bool = false
     @State private var aiStatusMessage: String? = nil
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
@@ -59,6 +62,13 @@ public struct NoteEditorView: View {
                     checklistPreviewStrip(items: note.checklistItems)
                 }
 
+                if let note = currentNote {
+                    let backlinks = store.getBacklinks(for: note.title)
+                    if !backlinks.isEmpty {
+                        backlinksPreviewStrip(links: backlinks)
+                    }
+                }
+
                 editorArea
 
                 footerBar
@@ -81,6 +91,32 @@ public struct NoteEditorView: View {
         )
         .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
         .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isFolded)
+        .popover(isPresented: $showVersionHistory) {
+            NoteVersionHistoryView(noteId: noteId) {
+                loadNoteData()
+                showVersionHistory = false
+            }
+        }
+        .popover(isPresented: $showTemplatePicker) {
+            TemplatePickerView(noteId: noteId) { template in
+                store.applyTemplate(noteId: noteId, template: template, isTurkish: loc.language == .turkish)
+                loadNoteData()
+                showTemplatePicker = false
+            }
+        }
+        .sheet(isPresented: $showPencilDrawing) {
+            PencilDrawingView(
+                noteId: noteId,
+                onSave: { url in
+                    let name = url.lastPathComponent
+                    localBody += "\n\n![\(name)](\(name))\n"
+                    showPencilDrawing = false
+                },
+                onDismiss: {
+                    showPencilDrawing = false
+                }
+            )
+        }
         .onAppear {
             loadNoteData()
         }
@@ -177,6 +213,24 @@ public struct NoteEditorView: View {
             }
             .buttonStyle(.plain)
             .help(isRecordingVoice ? loc.text(.speechStop) : loc.text(.speechRecord))
+
+            // Templates Button
+            Button(action: { showTemplatePicker.toggle() }) {
+                Image(systemName: "square.dashed.inset.filled")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(loc.language == .turkish ? "Not Şablonu Uygula" : "Apply Note Template")
+
+            // Version History Button
+            Button(action: { showVersionHistory.toggle() }) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(loc.language == .turkish ? "Versiyon Geçmişi" : "Version History")
 
             // Apple Intelligence Sparkles Menu
             aiToolsMenu
@@ -455,6 +509,42 @@ public struct NoteEditorView: View {
         }
     }
 
+    // MARK: - Backlinks Strip (Bidirectional Linking)
+
+    private func backlinksPreviewStrip(links: [NoteItem]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                Image(systemName: "link")
+                    .font(.system(size: 9))
+                    .foregroundColor(localColor.secondaryTextColor)
+
+                Text(loc.language == .turkish ? "Bağlantılı:" : "Linked from:")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(localColor.secondaryTextColor)
+
+                ForEach(links) { link in
+                    Button(action: {
+                        NoteWindowManager.shared.openNote(id: link.id)
+                    }) {
+                        HStack(spacing: 3) {
+                            Circle().fill(link.color.dotColor).frame(width: 5, height: 5)
+                            Text(link.displayTitle)
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.35))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+        }
+    }
+
     // MARK: - Main Editor
 
     private var editorFont: Font {
@@ -546,6 +636,24 @@ public struct NoteEditorView: View {
                 reminderPopoverContent
             }
             .help(loc.text(.addReminder))
+
+            // Apple Pencil Sketch Button
+            Button(action: { showPencilDrawing = true }) {
+                Image(systemName: "pencil.tip.crop.circle")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Apple Pencil Sketch & Canvas")
+
+            // Calendar Export (.ics)
+            Button(action: exportToCalendar) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Export to Apple / Google / Outlook Calendar")
 
             Divider().frame(height: 10)
 
@@ -814,6 +922,12 @@ public struct NoteEditorView: View {
     private func toggleFavorite() {
         isFavorite.toggle()
         store.toggleFavorite(noteId: noteId)
+    }
+
+    private func exportToCalendar() {
+        guard let note = currentNote else { return }
+        CalendarSyncService.shared.openInCalendarApp(note: note)
+        aiStatusMessage = loc.language == .turkish ? "Takvim etkinliği oluşturuldu (.ics)" : "Calendar event generated (.ics)"
     }
 
     // MARK: - Actions & Helpers

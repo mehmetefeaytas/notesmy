@@ -13,9 +13,13 @@ public struct AllNotesWindowView: View {
     @State private var viewMode: ViewMode = .list
     @State private var isSemanticSearchEnabled: Bool = false
 
+    @ObservedObject var cloudKit = CloudKitSyncService.shared
+
     public enum ViewMode: String, CaseIterable, Identifiable {
         case list = "List View"
         case board = "Sticky Board"
+        case graph = "Knowledge Graph"
+        case secondBrain = "AI Second Brain"
         public var id: String { rawValue }
     }
 
@@ -73,14 +77,19 @@ public struct AllNotesWindowView: View {
 
     public var body: some View {
         Group {
-            if viewMode == .board {
-                StickyBoardView()
-            } else {
+            switch viewMode {
+            case .list:
                 NavigationSplitView {
                     sidebarContent
                 } detail: {
                     detailContent
                 }
+            case .board:
+                StickyBoardView()
+            case .graph:
+                KnowledgeGraphView()
+            case .secondBrain:
+                SecondBrainChatView()
             }
         }
         .frame(minWidth: 800, minHeight: 540)
@@ -89,14 +98,33 @@ public struct AllNotesWindowView: View {
                 Picker("View Mode", selection: $viewMode) {
                     Label("List", systemImage: "list.bullet").tag(ViewMode.list)
                     Label(loc.text(.stickyBoard), systemImage: "square.grid.3x3.fill").tag(ViewMode.board)
+                    Label("Graph", systemImage: "circle.hexagongrid.fill").tag(ViewMode.graph)
+                    Label("Second Brain", systemImage: "brain.head.profile").tag(ViewMode.secondBrain)
                 }
                 .pickerStyle(.segmented)
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
+                // Web Clipper
+                Button(action: clipWebURL) {
+                    Label("Web Clip", systemImage: "globe")
+                }
+                .help("Clip URL from Clipboard")
+
+                // iCloud Sync Button
+                Button(action: {
+                    Task {
+                        await cloudKit.syncNotes()
+                    }
+                }) {
+                    Label(cloudKit.syncStatusMessage, systemImage: cloudKit.isSyncing ? "arrow.triangle.2.circlepath" : "icloud")
+                }
+                .help(cloudKit.syncStatusMessage)
+
                 Button(action: {
                     let note = store.createNote(category: selectedCategory == "All" ? "General" : selectedCategory)
                     selectedNoteId = note.id
+                    viewMode = .list
                 }) {
                     Label(loc.text(.newNote), systemImage: "plus")
                 }
@@ -404,6 +432,13 @@ public struct AllNotesWindowView: View {
         panel.nameFieldStringValue = "NotesMy_Export.txt"
         if panel.runModal() == .OK, let url = panel.url {
             try? store.exportAllAsSingleFile(to: url)
+        }
+    }
+
+    private func clipWebURL() {
+        if let note = WebClipperService.shared.clipCurrentURLFromPasteboard() {
+            selectedNoteId = note.id
+            viewMode = .list
         }
     }
 }
