@@ -111,6 +111,7 @@ Doğrudan Universal DMG dosyasını indirmek isterseniz [GitHub Releases](https:
 | Aşama | Özellik | Durum | Teknoloji |
 | :--- | :--- | :---: | :--- |
 | **V1 — Temel** | Pastel temalı metin ve kontrol listesi (checklist) notları | ✅ | Yerel SwiftUI TextEditor |
+| **V1 — Temel** | Zengin Markdown Desteği (`**kalın**`, `*italik*`, `~~çizili~~`, kod, başlıklar, canlı önizleme) | ✅ | SwiftUI AttributedString + Markdown Motoru |
 | **V1 — Temel** | Ekran kenarına sabitlenen yelpaze kart çekmecesi | ✅ | AppKit Yüzen NSPanel |
 | **V1 — Temel** | Etiketler, Kategoriler, Sabitleme ve Favoriler | ✅ | Yerel JSON Depolama |
 | **V1 — Temel** | Klavye Ok Tuşlarıyla (`←` / `→`) Kategoriler Arası Gezinme | ✅ | AppKit Event Monitor + ScrollViewReader |

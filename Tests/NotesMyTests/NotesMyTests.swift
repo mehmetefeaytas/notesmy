@@ -331,4 +331,19 @@ struct NotesMyTests {
         #expect(release.displayTitle == "NotesMy 1.7.0")
         #expect(release.dmgDownloadURL?.absoluteString == "https://github.com/mehmetefeaytas/notesmy/releases/download/v1.7.0/NotesMy-1.7.0.dmg")
     }
+
+    @Test("Markdown format stripping and snippet presentation")
+    func testMarkdownSnippets() {
+        let note = NoteItem(
+            title: "Markdown Test",
+            body: "# Header 1\nThis is **bold** text and `code` and ~~strike~~\n- [ ] Task 1"
+        )
+        let snippet = note.previewSnippet
+        #expect(!snippet.contains("**"))
+        #expect(!snippet.contains("~~"))
+        #expect(!snippet.contains("`"))
+        #expect(!snippet.hasPrefix("#"))
+        #expect(snippet.contains("Header 1"))
+        #expect(snippet.contains("bold text"))
+    }
 }

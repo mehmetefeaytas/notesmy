@@ -33,6 +33,8 @@ public struct NoteEditorView: View {
     @State private var showNewCategoryAlert: Bool = false
     @State private var newCategoryName: String = ""
     @State private var aiStatusMessage: String? = nil
+    @State private var isMarkdownPreview: Bool = false
+    @State private var showMarkdownFormatBar: Bool = true
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
         self.noteId = noteId
@@ -799,22 +801,150 @@ public struct NoteEditorView: View {
 
     @ViewBuilder
     private var editorArea: some View {
-        if #available(macOS 15.0, *) {
-            TextEditor(text: $localBody)
-                .font(editorFont)
-                .foregroundColor(localColor.textColor)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 10)
-                .background(Color.clear)
-                .writingToolsBehavior(.complete)
+        if isMarkdownPreview {
+            MarkdownRendererView(
+                markdown: localBody,
+                localColor: localColor,
+                fontSize: store.fontSize,
+                fontFamily: store.selectedFont,
+                onToggleChecklist: { lineIndex in
+                    store.toggleChecklist(noteId: noteId, lineIndex: lineIndex)
+                    if let updated = store.notes.first(where: { $0.id == noteId }) {
+                        localBody = updated.body
+                    }
+                },
+                onOpenWikiLink: { targetTitle in
+                    if let target = store.notes.first(where: { $0.title.localizedCaseInsensitiveCompare(targetTitle) == .orderedSame }) {
+                        NoteWindowManager.shared.openNote(id: target.id)
+                    }
+                },
+                onEditRequest: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isMarkdownPreview = false
+                    }
+                }
+            )
+            .background(Color.clear)
         } else {
-            TextEditor(text: $localBody)
-                .font(editorFont)
-                .foregroundColor(localColor.textColor)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 10)
-                .background(Color.clear)
+            VStack(spacing: 0) {
+                if showMarkdownFormatBar && !isCodeMode {
+                    markdownFormatBar
+                }
+
+                if #available(macOS 15.0, *) {
+                    TextEditor(text: $localBody)
+                        .font(editorFont)
+                        .foregroundColor(localColor.textColor)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 10)
+                        .background(Color.clear)
+                        .writingToolsBehavior(.complete)
+                } else {
+                    TextEditor(text: $localBody)
+                        .font(editorFont)
+                        .foregroundColor(localColor.textColor)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 10)
+                        .background(Color.clear)
+                }
+            }
         }
+    }
+
+    // MARK: - Markdown Format Bar
+
+    private var markdownFormatBar: some View {
+        HStack(spacing: 3) {
+            formatButton(symbol: "bold", tooltip: "Kalın / Bold (**metin**) [⌘B]", action: {
+                insertMarkdown(prefix: "**", suffix: "**", placeholder: "kalın metin")
+            })
+
+            formatButton(symbol: "italic", tooltip: "İtalik / Italic (*metin*) [⌘I]", action: {
+                insertMarkdown(prefix: "*", suffix: "*", placeholder: "italik metin")
+            })
+
+            formatButton(symbol: "strikethrough", tooltip: "Üstü Çizili (~~metin~~)", action: {
+                insertMarkdown(prefix: "~~", suffix: "~~", placeholder: "çizili metin")
+            })
+
+            formatButton(symbol: "chevron.left.forwardslash.chevron.right", tooltip: "Satır İçi Kod (`kod`)", action: {
+                insertMarkdown(prefix: "`", suffix: "`", placeholder: "kod")
+            })
+
+            formatButton(symbol: "number", tooltip: "Başlık / Heading (## Başlık)", action: {
+                insertMarkdown(prefix: "\n## ", suffix: "\n", placeholder: "Başlık")
+            })
+
+            formatButton(symbol: "quote.opening", tooltip: "Alıntı / Quote (> alıntı)", action: {
+                insertMarkdown(prefix: "\n> ", suffix: "\n", placeholder: "alıntı")
+            })
+
+            formatButton(symbol: "list.bullet", tooltip: "Madde İmleri (- liste)", action: {
+                insertMarkdown(prefix: "\n- ", suffix: "", placeholder: "madde")
+            })
+
+            formatButton(symbol: "checklist", tooltip: "Görev Listesi (- [ ] görev)", action: {
+                insertMarkdown(prefix: "\n- [ ] ", suffix: "", placeholder: "yapılacak iş")
+            })
+
+            formatButton(symbol: "link", tooltip: "Bağlantı ([başlık](url))", action: {
+                insertMarkdown(prefix: "[", suffix: "](https://...)", placeholder: "bağlantı metni")
+            })
+
+            Spacer()
+
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isMarkdownPreview.toggle()
+                }
+            }) {
+                HStack(spacing: 3) {
+                    Image(systemName: isMarkdownPreview ? "pencil" : "eye")
+                        .font(.system(size: 8, weight: .bold))
+                    Text(isMarkdownPreview ? (loc.language == .turkish ? "Düzenle" : "Edit") : (loc.language == .turkish ? "Önizle" : "Preview"))
+                        .font(.system(size: 8, weight: .semibold))
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(isMarkdownPreview ? Color.accentColor : Color.black.opacity(0.08))
+                .foregroundColor(isMarkdownPreview ? .white : localColor.secondaryTextColor)
+                .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .help("Markdown Önizleme (⌘P)")
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .background(Color.black.opacity(0.04))
+        .cornerRadius(6)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 2)
+    }
+
+    private func formatButton(symbol: String, tooltip: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(localColor.secondaryTextColor)
+                .frame(width: 18, height: 18)
+                .background(Color.black.opacity(0.04))
+                .cornerRadius(3)
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+    }
+
+    private func insertMarkdown(prefix: String, suffix: String, placeholder: String) {
+        if localBody.isEmpty {
+            localBody = "\(prefix)\(placeholder)\(suffix)"
+        } else {
+            if prefix.hasPrefix("\n") {
+                localBody += "\(prefix)\(placeholder)\(suffix)"
+            } else {
+                localBody += " \(prefix)\(placeholder)\(suffix)"
+            }
+        }
+        persistChanges()
     }
 
     // MARK: - Footer Bar
@@ -894,6 +1024,19 @@ public struct NoteEditorView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Insert Checklist Item")
+
+                // Markdown Preview Toggle
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isMarkdownPreview.toggle()
+                    }
+                }) {
+                    Image(systemName: isMarkdownPreview ? "pencil.circle.fill" : "eye")
+                        .font(.system(size: 11))
+                        .foregroundColor(isMarkdownPreview ? Color.accentColor : localColor.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+                .help(isMarkdownPreview ? (loc.language == .turkish ? "Düzenleme Modu (⌘P)" : "Edit Mode (⌘P)") : (loc.language == .turkish ? "Markdown Önizleme (⌘P)" : "Markdown Preview (⌘P)"))
 
                 // Reminder
                 Button(action: { showReminderPopover.toggle() }) {

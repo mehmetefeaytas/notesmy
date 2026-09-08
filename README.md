@@ -125,6 +125,7 @@ Prefer a direct DMG download? Grab the latest Universal binary from [GitHub Rele
 | Tier | Feature | Status | Technology |
 | :--- | :--- | :---: | :--- |
 | **V1 — MVP** | Text & Checklist Notes with custom pastel themes | ✅ | Native SwiftUI TextEditor |
+| **V1 — MVP** | Rich Markdown Support (`**bold**`, `*italic*`, `~~strike~~`, code, headers, live preview) | ✅ | SwiftUI AttributedString + Markdown Engine |
 | **V1 — MVP** | Edge-Docked Fanned Card Deck | ✅ | AppKit Floating NSPanel |
 | **V1 — MVP** | Tags, Categories, Pinning & Favorites | ✅ | Local JSON Storage |
 | **V1 — MVP** | Arrow-Key Navigation (`←` / `→`) across Categories | ✅ | AppKit Event Monitor + ScrollViewReader |

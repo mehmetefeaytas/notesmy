@@ -142,7 +142,21 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
 
     public var previewSnippet: String {
         let lines = body.components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .map { line -> String in
+                var clean = line.trimmingCharacters(in: .whitespaces)
+                if clean.hasPrefix("#") {
+                    clean = clean.trimmingCharacters(in: CharacterSet(charactersIn: "# "))
+                }
+                clean = clean.replacingOccurrences(of: "**", with: "")
+                clean = clean.replacingOccurrences(of: "~~", with: "")
+                clean = clean.replacingOccurrences(of: "`", with: "")
+                if clean.hasPrefix("- [ ] ") || clean.hasPrefix("- [x] ") || clean.hasPrefix("- [X] ") {
+                    clean = String(clean.dropFirst(6))
+                } else if clean.hasPrefix("- ") || clean.hasPrefix("* ") {
+                    clean = String(clean.dropFirst(2))
+                }
+                return clean
+            }
             .filter { !$0.isEmpty }
         if lines.isEmpty { return "Empty note..." }
         return lines.prefix(3).joined(separator: " · ")
