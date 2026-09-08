@@ -7,7 +7,7 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
 
     private var activePanels: [UUID: NSPanel] = [:]
 
-    public func openNote(id: UUID) {
+    public func openNote(id: UUID, on targetScreen: NSScreen? = nil) {
         // If already open, bring to front
         if let existing = activePanels[id] {
             existing.makeKeyAndOrderFront(nil)
@@ -18,7 +18,7 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
         guard let note = NoteStore.shared.notes.first(where: { $0.id == id }) else { return }
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 420),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -40,29 +40,27 @@ public final class NoteWindowManager: NSObject, NSWindowDelegate {
 
         panel.contentView = NSHostingView(rootView: editorView)
 
-        // Calculate initial placement
-        if let screen = NSScreen.main {
-            let screenFrame = screen.visibleFrame
-            let defaultWidth: CGFloat = 360
-            let defaultHeight: CGFloat = 400
+        let screen = targetScreen ?? NSScreen.main ?? NSScreen.screens[0]
+        let screenFrame = screen.visibleFrame
+        let defaultWidth: CGFloat = 380
+        let defaultHeight: CGFloat = 420
 
-            var x: CGFloat = screenFrame.maxX - defaultWidth - 280
-            var y: CGFloat = screenFrame.midY - (defaultHeight / 2)
+        var x: CGFloat = screenFrame.maxX - defaultWidth - 280
+        var y: CGFloat = screenFrame.midY - (defaultHeight / 2)
 
-            if NoteStore.shared.dockSide == .left {
-                x = screenFrame.minX + 280
-            } else if NoteStore.shared.dockSide == .bottom {
-                y = screenFrame.minY + 120
-            }
-
-            // Restore saved pinned position if exists
-            if let px = note.pinnedX, let py = note.pinnedY {
-                x = CGFloat(px)
-                y = CGFloat(py)
-            }
-
-            panel.setFrame(NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight), display: true)
+        if NoteStore.shared.dockSide == .left {
+            x = screenFrame.minX + 280
+        } else if NoteStore.shared.dockSide == .bottom {
+            y = screenFrame.minY + 120
         }
+
+        // Restore saved pinned position if exists
+        if let px = note.pinnedX, let py = note.pinnedY {
+            x = CGFloat(px)
+            y = CGFloat(py)
+        }
+
+        panel.setFrame(NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight), display: true)
 
         activePanels[id] = panel
         panel.makeKeyAndOrderFront(nil)

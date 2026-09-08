@@ -7,7 +7,7 @@ public struct AllNotesWindowView: View {
     @State private var selectedFilter: NoteFilter = .active
     @State private var selectedCategory: String = "All"
     @State private var selectedColorFilter: NoteColor? = nil
-    @State private var selectedNoteId: UUID? = nil
+    @State private var selectedNoteId: UUID? = NoteStore.shared.activeNotes.first?.id
 
     public enum NoteFilter: String, CaseIterable, Identifiable {
         case active = "Active"
@@ -72,6 +72,12 @@ public struct AllNotesWindowView: View {
                     }
                     Button("Export as Single Document (.txt)") {
                         exportSingleDocument()
+                    }
+                    Divider()
+                    Button("Export to Apple Notes") {
+                        if let id = selectedNoteId, let note = store.notes.first(where: { $0.id == id }) {
+                            AppleNotesService.shared.sendToAppleNotes(title: note.displayTitle, body: note.body)
+                        }
                     }
                 } label: {
                     Label("Export", systemImage: "square.and.arrow.up")

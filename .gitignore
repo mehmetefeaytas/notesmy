@@ -8,3 +8,5 @@ DerivedData/
 .netrc
 *.app/
 *.zip
+*.dmg
+dmg_staging/

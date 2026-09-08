@@ -1,0 +1,120 @@
+name: Release & Homebrew Cask
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.3.0)'
+        required: true
+        default: 'v1.3.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build Universal macOS Binary & Package DMG
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          ./package_dmg.sh
+
+      - name: Compute SHA-256 Checksum
+        id: shasum
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          DMG_FILE="NotesMy-${VERSION}.dmg"
+          if [ ! -f "$DMG_FILE" ]; then
+            DMG_FILE="NotesMy-1.3.0.dmg"
+          fi
+          SHA=$(shasum -a 256 "$DMG_FILE" | awk '{print $1}')
+          echo "sha=${SHA}" >> $GITHUB_OUTPUT
+          echo "dmg=${DMG_FILE}" >> $GITHUB_OUTPUT
+          echo "Calculated SHA256: ${SHA}"
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: "NotesMy ${{ steps.get_version.outputs.tag }}"
+          files: |
+            ${{ steps.shasum.outputs.dmg }}
+            NotesMy.dmg
+            NotesMy.zip
+          draft: false
+          prerelease: false
+          body: |
+            ### NotesMy ${{ steps.get_version.outputs.tag }} 🚀
+
+            #### 📦 Installation via Homebrew:
+            ```bash
+            brew install --cask mehmetefeaytas/tap/notesmy
+            ```
+
+            #### 🔑 SHA-256 Checksum:
+            `${{ steps.shasum.outputs.sha }}`
+
+      - name: Update Homebrew Tap Formula
+        env:
+          TAP_PAT: ${{ secrets.TAP_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.get_version.outputs.version }}
+          SHA: ${{ steps.shasum.outputs.sha }}
+        run: |
+          echo "Updating mehmetefeaytas/homebrew-tap..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clone tap repository
+          git clone https://x-access-token:${TAP_PAT}@github.com/mehmetefeaytas/homebrew-tap.git tap-repo || exit 0
+          cd tap-repo
+          mkdir -p Casks
+          
+          cat << 'EOF' > Casks/notesmy.rb
+          cask "notesmy" do
+            version "VERSION_PLACEHOLDER"
+            sha256 "SHA_PLACEHOLDER"
+
+            url "https://github.com/mehmetefeaytas/notesmy/releases/download/v#{version}/NotesMy-#{version}.dmg"
+            name "NotesMy"
+            desc "Frictionless, edge-docked sticky notes and smart scratchpad for macOS"
+            homepage "https://github.com/mehmetefeaytas/notesmy"
+
+            auto_updates true
+            depends_on macos: ">= :ventura"
+
+            app "NotesMy.app"
+
+            uninstall quit: "app.notesmy.mac"
+
+            zap trash: [
+              "~/Library/Application Support/NotesMy",
+              "~/Library/Preferences/app.notesmy.mac.plist",
+            ]
+          end
+          EOF
+          
+          sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/g" Casks/notesmy.rb
+          sed -i '' "s/SHA_PLACEHOLDER/${SHA}/g" Casks/notesmy.rb
+          
+          git add Casks/notesmy.rb
+          git commit -m "chore: bump notesmy to v${VERSION}" || exit 0
+          git push origin main || exit 0

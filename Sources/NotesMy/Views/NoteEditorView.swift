@@ -19,7 +19,6 @@ public struct NoteEditorView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var copiedFeedback: Bool = false
     @State private var showOpacityPopover: Bool = false
-    @State private var showAIPopover: Bool = false
     @State private var aiStatusMessage: String? = nil
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
@@ -45,7 +44,6 @@ public struct NoteEditorView: View {
                     aiBanner(message: message)
                 }
 
-                // Interactive Checklists quick-toggle strip if items exist
                 if let note = currentNote, !note.checklistItems.isEmpty {
                     checklistPreviewStrip(items: note.checklistItems)
                 }
@@ -56,10 +54,10 @@ public struct NoteEditorView: View {
             }
         }
         .frame(
-            minWidth: 320,
-            idealWidth: 360,
-            minHeight: isFolded ? 48 : 340,
-            idealHeight: isFolded ? 48 : 400
+            minWidth: 340,
+            idealWidth: 380,
+            minHeight: isFolded ? 46 : 360,
+            idealHeight: isFolded ? 46 : 420
         )
         .background(
             localColor.primaryColor
@@ -105,11 +103,11 @@ public struct NoteEditorView: View {
     // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             // Fold / Accordion Toggle
             Button(action: { isFolded.toggle() }) {
                 Image(systemName: isFolded ? "chevron.right" : "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundColor(localColor.secondaryTextColor)
             }
             .buttonStyle(.plain)
@@ -120,21 +118,18 @@ public struct NoteEditorView: View {
                 Circle()
                     .fill(localColor.dotColor)
                     .frame(width: 14, height: 14)
-                    .overlay(Circle().stroke(Color.white.opacity(0.4), lineWidth: 1))
+                    .overlay(Circle().stroke(Color.white.opacity(0.5), lineWidth: 1))
             }
             .buttonStyle(.plain)
             .help("Change Color (⌘.)")
 
             // Title Field
-            TextField("Note Title...", text: $localTitle)
+            TextField("", text: $localTitle, prompt: Text("Note Title...").foregroundColor(localColor.secondaryTextColor))
                 .textFieldStyle(.plain)
                 .font(.system(size: 13, weight: .bold, design: isCodeMode ? .monospaced : .rounded))
                 .foregroundColor(localColor.textColor)
 
             Spacer()
-
-            // Apple Intelligence Sparkles Menu
-            aiToolsMenu
 
             // Category Menu
             Menu {
@@ -145,7 +140,7 @@ public struct NoteEditorView: View {
                 }
             } label: {
                 Text(localCategory)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundColor(localColor.secondaryTextColor)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -154,53 +149,8 @@ public struct NoteEditorView: View {
             }
             .menuStyle(.borderlessButton)
 
-            // Opacity / Translucency Popover Button
-            Button(action: { showOpacityPopover.toggle() }) {
-                Image(systemName: "circle.lefthalf.filled")
-                    .font(.system(size: 11))
-                    .foregroundColor(localColor.secondaryTextColor)
-            }
-            .buttonStyle(.plain)
-            .popover(isPresented: $showOpacityPopover) {
-                VStack(spacing: 8) {
-                    Text("Window Opacity: \(Int(opacity * 100))%")
-                        .font(.system(size: 11, weight: .medium))
-                    Slider(value: $opacity, in: 0.4...1.0, step: 0.05)
-                        .frame(width: 120)
-                }
-                .padding(10)
-            }
-            .help("Window Transparency")
-
-            // Code Mode Toggle
-            Button(action: { isCodeMode.toggle() }) {
-                Image(systemName: "chevron.left.forwardslash.chevron.right")
-                    .font(.system(size: 10, weight: isCodeMode ? .bold : .regular))
-                    .foregroundColor(isCodeMode ? Color.accentColor : localColor.secondaryTextColor)
-                    .padding(3)
-                    .background(isCodeMode ? Color.accentColor.opacity(0.18) : Color.clear)
-                    .cornerRadius(4)
-            }
-            .buttonStyle(.plain)
-            .help(isCodeMode ? "Disable Code Mode" : "Enable Monospace Code Mode")
-
-            // Copy Note Text Button
-            Button(action: copyToClipboard) {
-                Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 11))
-                    .foregroundColor(copiedFeedback ? .green : localColor.secondaryTextColor)
-            }
-            .buttonStyle(.plain)
-            .help("Copy Note Content")
-
-            // Native Share Button
-            Button(action: shareNote) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 11))
-                    .foregroundColor(localColor.secondaryTextColor)
-            }
-            .buttonStyle(.plain)
-            .help("Share Note...")
+            // Apple Intelligence Sparkles Menu
+            aiToolsMenu
 
             // Pin / Floating toggle
             Button(action: togglePin) {
@@ -215,7 +165,7 @@ public struct NoteEditorView: View {
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 13))
-                    .foregroundColor(localColor.secondaryTextColor.opacity(0.6))
+                    .foregroundColor(localColor.secondaryTextColor.opacity(0.7))
             }
             .buttonStyle(.plain)
             .help("Close (Esc)")
@@ -424,7 +374,7 @@ public struct NoteEditorView: View {
     // MARK: - Footer Bar
 
     private var footerBar: some View {
-        HStack {
+        HStack(spacing: 8) {
             let wordCount = localBody.split { $0.isWhitespace || $0.isNewline }.count
             let charCount = localBody.count
 
@@ -452,6 +402,69 @@ public struct NoteEditorView: View {
             .help("Next Note (⌘])")
 
             Divider().frame(height: 10)
+
+            // Code Mode Toggle
+            Button(action: { isCodeMode.toggle() }) {
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .font(.system(size: 10, weight: isCodeMode ? .bold : .regular))
+                    .foregroundColor(isCodeMode ? Color.accentColor : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(isCodeMode ? "Disable Code Mode" : "Enable Monospace Code Mode")
+
+            // Opacity / Translucency Popover Button
+            Button(action: { showOpacityPopover.toggle() }) {
+                Image(systemName: "circle.lefthalf.filled")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showOpacityPopover) {
+                VStack(spacing: 8) {
+                    Text("Window Opacity: \(Int(opacity * 100))%")
+                        .font(.system(size: 11, weight: .medium))
+                    Slider(value: $opacity, in: 0.4...1.0, step: 0.05)
+                        .frame(width: 120)
+                }
+                .padding(10)
+            }
+            .help("Window Transparency")
+
+            // Copy Note Text Button
+            Button(action: copyToClipboard) {
+                Image(systemName: copiedFeedback ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 11))
+                    .foregroundColor(copiedFeedback ? .green : localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Copy Note Content")
+
+            // Native Share Button
+            Button(action: shareNote) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Share Note...")
+
+            // Send to Apple Notes
+            Button(action: sendToAppleNotes) {
+                Image(systemName: "apple.logo")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Export to Apple Notes")
+
+            // Send to Apple Reminders
+            Button(action: sendToReminders) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help("Export to Apple Reminders")
 
             // Checklist insert button
             Button(action: insertChecklistItem) {
@@ -628,6 +641,21 @@ public struct NoteEditorView: View {
         let picker = NSSharingServicePicker(items: [fullText])
         if let keyWindow = NSApp.keyWindow, let contentView = keyWindow.contentView {
             picker.show(relativeTo: contentView.bounds, of: contentView, preferredEdge: .minY)
+        }
+    }
+
+    private func sendToAppleNotes() {
+        let success = AppleNotesService.shared.sendToAppleNotes(title: localTitle.isEmpty ? "Note" : localTitle, body: localBody)
+        withAnimation {
+            aiStatusMessage = success ? "Exported to Apple Notes!" : "Failed to export to Apple Notes"
+        }
+    }
+
+    private func sendToReminders() {
+        let firstDate = detectedDates.first?.date
+        let success = AppleNotesService.shared.sendToReminders(title: localTitle.isEmpty ? "Reminder" : localTitle, notes: localBody, dueDate: firstDate)
+        withAnimation {
+            aiStatusMessage = success ? "Added to Apple Reminders!" : "Failed to add to Reminders"
         }
     }
 

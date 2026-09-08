@@ -4,11 +4,33 @@
 > Powered natively by Swift 6, AppKit, SwiftUI, and **Apple Intelligence**. Zero clutter, zero subscriptions, zero tracking.
 
 [![macOS](https://img.shields.io/badge/macOS-13.0%2B-black?style=flat&logo=apple)](https://apple.com)
+[![Homebrew Cask](https://img.shields.io/badge/Homebrew-Cask-blue?style=flat&logo=homebrew)](https://github.com/mehmetefeaytas/homebrew-tap)
 [![Apple Intelligence](https://img.shields.io/badge/Apple%20Intelligence-Ready-purple?style=flat&logo=apple)](README.md)
-[![Swift](https://img.shields.io/badge/Swift-6.0-orange?style=flat&logo=swift)](https://swift.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-green)](README.md)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](README.md)
+
+---
+
+## ⚡ Quick Install via Homebrew
+
+You can install NotesMy with a single command via [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask mehmetefeaytas/tap/notesmy
+```
+
+To upgrade later:
+```bash
+brew upgrade --cask notesmy
+```
+
+To uninstall cleanly:
+```bash
+brew uninstall --cask notesmy
+```
+
+Or download the universal `.dmg` installer directly from the [Releases page](https://github.com/mehmetefeaytas/notesmy/releases).
 
 ---
 
@@ -20,7 +42,7 @@ Traditional sticky notes clutter your workspace, get buried under app windows, a
 * It sleeps on the screen edge as an elegant, 14pt vertical pill with colored dashes.
 * Reach for it with your mouse, and your notes **fan out smoothly** along the edge.
 * Select any note to expand it in-place, write your thoughts, and watch it auto-save locally within 300ms.
-* **Now with Apple Intelligence**: Native macOS Sequoia Writing Tools, on-device AI Summarization, Action Item Extraction into Checklists, Smart Title Generation, and Auto-Categorization!
+* **Now with Multi-Display & Apple Notes Integration**: Follows your cursor across multiple connected screens, and lets you 1-click export to Apple Notes and Apple Reminders!
 
 ---
 
@@ -68,6 +90,14 @@ Easily polish your text into **Concise & Punchy**, **Professional**, or **Bullet
 ---
 
 ## ✨ Full Feature Matrix
+
+### 🖥️ Multi-Display & Cursor Following
+Seamlessly supports dual or triple monitor setups. As your pointer moves between displays, NotesMy automatically aligns with the edge of your active monitor so notes are always right where your attention is.
+
+### 🍎 Apple Notes & Reminders 1-Click Bridge
+Need to push your scratchpad thought into your permanent knowledge base or task list?
+- Tap the **Apple Notes** button to instantly create a note in your Apple Notes account.
+- Tap the **Reminders** button to turn tasks into macOS Reminders with due dates!
 
 ### 📂 Folders & Topic Collections *(SideNotes inspired)*
 Organize your scratchpad notes by topics: **Work**, **Personal**, **Code**, **Ideas**, and **General**. Filter the active deck with one click directly at the top of the edge fan, or view by collection in the All Notes library.
@@ -129,7 +159,7 @@ Share notes directly to Mail, Messages, Apple Notes, or AirDrop using the native
 ## 🛠️ Building & Running from Source
 
 ### Prerequisites
-- macOS 13.0 or later (Fully optimized for macOS 15 Sequoia with Apple Intelligence)
+- macOS 13.0 or later (Universal binary: Apple Silicon + Intel)
 - Xcode 15+ / Swift 6.0 toolchain
 
 ### Build via Swift Package Manager
@@ -141,12 +171,11 @@ cd notesmy
 # Run test suite
 swift test
 
-# Build and package NotesMy.app bundle
-chmod +x build_app.sh
-./build_app.sh
+# Build universal DMG package
+./package_dmg.sh
 
-# Launch the application
-open NotesMy.app
+# Open DMG
+open NotesMy-1.3.0.dmg
 ```
 
 ---
@@ -156,7 +185,9 @@ open NotesMy.app
 ```
 notesmy/
 ├── Package.swift                    # Swift 6 SPM manifest
-├── build_app.sh                     # Automated packaging & codesigning script
+├── package_dmg.sh                   # Universal DMG packaging & checksum script
+├── .github/workflows/
+│   └── release.yml                  # Automated CI/CD release & Homebrew tap sync
 ├── Resources/
 │   └── Info.plist                   # LSUIElement accessory app configuration
 ├── Sources/
@@ -169,6 +200,7 @@ notesmy/
 │       │   ├── NoteColor.swift      # 6 curated theme palettes & color extensions
 │       │   └── SmartDateDetector.swift # NLP date & calendar event detection
 │       ├── Services/
+│       │   ├── AppleNotesService.swift # Apple Notes & Reminders AppleScript bridge
 │       │   ├── SmartAIService.swift # Apple Intelligence & on-device NLP processing
 │       │   ├── NoteStore.swift      # Debounced auto-save, categories & clipboard hub
 │       │   ├── ClipboardService.swift # Instant clipboard capture service
@@ -179,7 +211,7 @@ notesmy/
 │       │   ├── AllNotesWindowView.swift # Split-view library & category filters
 │       │   └── SettingsView.swift   # Preferences, docking & hotkey guide
 │       ├── Windows/
-│       │   ├── EdgeDeckWindowManager.swift  # Floating NSPanel on screen edge
+│       │   ├── EdgeDeckWindowManager.swift  # Multi-display floating panel
 │       │   ├── NoteWindowManager.swift      # Movable sticky note panels
 │       │   ├── AllNotesWindowManager.swift  # Standard library window
 │       │   └── SettingsWindowManager.swift  # Preferences window
@@ -205,6 +237,6 @@ Contributions, feature suggestions, and bug reports are welcome!
 
 ## 📄 License
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+Licensed under the **Apache License, Version 2.0** (the "License"). You may obtain a copy of the License in the [`LICENSE`](LICENSE) file.
 
 Developed with ❤️ by [Mehmet Efe Aytaş](https://github.com/mehmetefeaytas).

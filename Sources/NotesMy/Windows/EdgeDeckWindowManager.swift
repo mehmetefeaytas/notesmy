@@ -8,12 +8,14 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
 
     private var deckPanel: NSPanel?
     private var cancellables = Set<AnyCancellable>()
-    private var trackingArea: NSTrackingArea?
+    private var globalMouseMonitor: Any?
+    private var activeScreen: NSScreen?
 
     public override init() {
         super.init()
         setupDeckPanel()
         setupObservations()
+        setupMultiDisplayMouseTracking()
     }
 
     public func showDeck() {
@@ -52,12 +54,14 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
 
         let deckView = EdgeDeckView(
             store: NoteStore.shared,
-            onSelectNote: { noteId in
-                NoteWindowManager.shared.openNote(id: noteId)
+            onSelectNote: { [weak self] noteId in
+                let targetScreen = self?.activeScreen ?? NSScreen.main
+                NoteWindowManager.shared.openNote(id: noteId, on: targetScreen)
             },
-            onNewNote: {
+            onNewNote: { [weak self] in
                 let note = NoteStore.shared.createNote()
-                NoteWindowManager.shared.openNote(id: note.id)
+                let targetScreen = self?.activeScreen ?? NSScreen.main
+                NoteWindowManager.shared.openNote(id: note.id, on: targetScreen)
             },
             onOpenAllNotes: {
                 AllNotesWindowManager.shared.show()
@@ -65,9 +69,10 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
             onOpenArchive: {
                 AllNotesWindowManager.shared.show()
             },
-            onQuickCapture: {
+            onQuickCapture: { [weak self] in
                 if let note = ClipboardService.shared.captureToNewNote() {
-                    NoteWindowManager.shared.openNote(id: note.id)
+                    let targetScreen = self?.activeScreen ?? NSScreen.main
+                    NoteWindowManager.shared.openNote(id: note.id, on: targetScreen)
                 }
             },
             onOpenSettings: {
@@ -79,6 +84,7 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
         panel.contentView = hostingView
 
         self.deckPanel = panel
+        self.activeScreen = NSScreen.main
         updatePanelFrame(isExpanded: false)
         panel.orderFront(nil)
     }
@@ -101,13 +107,40 @@ public final class EdgeDeckWindowManager: NSObject, NSWindowDelegate {
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.updatePanelFrame(isExpanded: NoteStore.shared.isDeckHovered)
+                self?.handleScreenReconfiguration()
             }
             .store(in: &cancellables)
     }
 
+    // MARK: - Multi-Display Tracking
+    private func setupMultiDisplayMouseTracking() {
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
+            Task { @MainActor [weak self] in
+                self?.checkMouseScreenTransition()
+            }
+        }
+    }
+
+    private func checkMouseScreenTransition() {
+        let mouseLoc = NSEvent.mouseLocation
+        guard let currentScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) }) else {
+            return
+        }
+
+        if currentScreen != activeScreen && !NoteStore.shared.isDeckHovered {
+            self.activeScreen = currentScreen
+            updatePanelFrame(isExpanded: false)
+        }
+    }
+
+    private func handleScreenReconfiguration() {
+        let mouseLoc = NSEvent.mouseLocation
+        self.activeScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) }) ?? NSScreen.main
+        updatePanelFrame(isExpanded: NoteStore.shared.isDeckHovered)
+    }
+
     public func updatePanelFrame(isExpanded: Bool) {
-        guard let screen = NSScreen.main, let panel = deckPanel else { return }
+        guard let screen = activeScreen ?? NSScreen.main, let panel = deckPanel else { return }
         let screenFrame = screen.visibleFrame
 
         let width: CGFloat = isExpanded ? 260 : 18
