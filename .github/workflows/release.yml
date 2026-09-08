@@ -216,7 +216,6 @@ jobs:
           VERSION:   ${{ needs.release.outputs.version }}
           SHA256:    ${{ needs.release.outputs.sha256 }}
         run: |
-          # ── Clone tap ─────────────────────────────────────────
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -227,33 +226,33 @@ jobs:
           cd tap-repo
           mkdir -p Casks
 
-          # ── Write cask file ───────────────────────────────────
-          cat > Casks/notesmy.rb << CASK_EOF
-cask "notesmy" do
-  version "${VERSION}"
-  sha256 "${SHA256}"
+          # Write cask file using printf (avoids heredoc YAML conflicts)
+          printf 'cask "notesmy" do\n' > Casks/notesmy.rb
+          printf '  version "%s"\n' "${VERSION}" >> Casks/notesmy.rb
+          printf '  sha256 "%s"\n' "${SHA256}" >> Casks/notesmy.rb
+          printf '\n' >> Casks/notesmy.rb
+          printf '  url "https://github.com/mehmetefeaytas/notesmy/releases/download/v#{version}/NotesMy-#{version}.dmg"\n' >> Casks/notesmy.rb
+          printf '  name "NotesMy"\n' >> Casks/notesmy.rb
+          printf '  desc "Smart notes with AI Second Brain, Knowledge Graph, iCloud Sync & Voice Transcription for macOS"\n' >> Casks/notesmy.rb
+          printf '  homepage "https://github.com/mehmetefeaytas/notesmy"\n' >> Casks/notesmy.rb
+          printf '\n' >> Casks/notesmy.rb
+          printf '  auto_updates true\n' >> Casks/notesmy.rb
+          printf '  depends_on macos: :ventura\n' >> Casks/notesmy.rb
+          printf '\n' >> Casks/notesmy.rb
+          printf '  app "NotesMy.app"\n' >> Casks/notesmy.rb
+          printf '\n' >> Casks/notesmy.rb
+          printf '  uninstall quit: "app.notesmy.mac"\n' >> Casks/notesmy.rb
+          printf '\n' >> Casks/notesmy.rb
+          printf '  zap trash: [\n' >> Casks/notesmy.rb
+          printf '    "~/Library/Application Support/NotesMy",\n' >> Casks/notesmy.rb
+          printf '    "~/Library/Preferences/app.notesmy.mac.plist",\n' >> Casks/notesmy.rb
+          printf '    "~/Library/Caches/app.notesmy.mac",\n' >> Casks/notesmy.rb
+          printf '  ]\n' >> Casks/notesmy.rb
+          printf 'end\n' >> Casks/notesmy.rb
 
-  url "https://github.com/mehmetefeaytas/notesmy/releases/download/v#{version}/NotesMy-#{version}.dmg"
-  name "NotesMy"
-  desc "Smart notes with AI Second Brain, Knowledge Graph, iCloud Sync & Voice Transcription for macOS"
-  homepage "https://github.com/mehmetefeaytas/notesmy"
+          echo "--- Generated Casks/notesmy.rb ---"
+          cat Casks/notesmy.rb
 
-  auto_updates true
-  depends_on macos: :ventura   # macOS 13.0+
-
-  app "NotesMy.app"
-
-  uninstall quit: "app.notesmy.mac"
-
-  zap trash: [
-    "~/Library/Application Support/NotesMy",
-    "~/Library/Preferences/app.notesmy.mac.plist",
-    "~/Library/Caches/app.notesmy.mac",
-  ]
-end
-CASK_EOF
-
-          # ── Commit & push ──────────────────────────────────────
           git add Casks/notesmy.rb
           git diff --cached --quiet && echo "No changes — cask already up to date." && exit 0
           git commit -m "chore: bump notesmy to v${VERSION}"
