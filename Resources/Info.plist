@@ -2,35 +2,35 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleExecutable</key>
-    <string>NotesMy</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleIdentifier</key>
-    <string>app.notesmy.mac</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>NotesMy</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.5.0</string>
-    <key>CFBundleVersion</key>
-    <string>1.5.0</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>NotesMy requires microphone access to record voice notes.</string>
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>NotesMy uses on-device speech recognition to transcribe voice notes into text.</string>
-    <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2026 Mehmet Efe Aytaş. Apache 2.0 Licensed.</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>NotesMy</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>app.notesmy.mac</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>NotesMy</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.5.1</string>
+	<key>CFBundleVersion</key>
+	<string>1.5.1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Mehmet Efe Aytaş. Apache 2.0 Licensed.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>NotesMy requires microphone access to record voice notes.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>NotesMy uses on-device speech recognition to transcribe voice notes into text.</string>
 </dict>
 </plist>
