@@ -210,6 +210,7 @@ jobs:
     runs-on: ubuntu-latest    # linux is faster + cheaper for git ops
     needs: release
     timeout-minutes: 10
+    continue-on-error: true
 
     steps:
       - name: Update Casks/notesmy.rb in homebrew-tap
