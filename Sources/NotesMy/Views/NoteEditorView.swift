@@ -35,6 +35,7 @@ public struct NoteEditorView: View {
     @State private var aiStatusMessage: String? = nil
     @State private var isMarkdownPreview: Bool = false
     @State private var showMarkdownFormatBar: Bool = true
+    @State private var showTablePopover: Bool = false
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
         self.noteId = noteId
@@ -801,36 +802,36 @@ public struct NoteEditorView: View {
 
     @ViewBuilder
     private var editorArea: some View {
-        if isMarkdownPreview {
-            MarkdownRendererView(
-                markdown: localBody,
-                localColor: localColor,
-                fontSize: store.fontSize,
-                fontFamily: store.selectedFont,
-                onToggleChecklist: { lineIndex in
-                    store.toggleChecklist(noteId: noteId, lineIndex: lineIndex)
-                    if let updated = store.notes.first(where: { $0.id == noteId }) {
-                        localBody = updated.body
-                    }
-                },
-                onOpenWikiLink: { targetTitle in
-                    if let target = store.notes.first(where: { $0.title.localizedCaseInsensitiveCompare(targetTitle) == .orderedSame }) {
-                        NoteWindowManager.shared.openNote(id: target.id)
-                    }
-                },
-                onEditRequest: {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        isMarkdownPreview = false
-                    }
-                }
-            )
-            .background(Color.clear)
-        } else {
-            VStack(spacing: 0) {
-                if showMarkdownFormatBar && !isCodeMode {
-                    markdownFormatBar
-                }
+        VStack(spacing: 0) {
+            if showMarkdownFormatBar && !isCodeMode {
+                markdownFormatBar
+            }
 
+            if isMarkdownPreview {
+                MarkdownRendererView(
+                    markdown: localBody,
+                    localColor: localColor,
+                    fontSize: store.fontSize,
+                    fontFamily: store.selectedFont,
+                    onToggleChecklist: { lineIndex in
+                        store.toggleChecklist(noteId: noteId, lineIndex: lineIndex)
+                        if let updated = store.notes.first(where: { $0.id == noteId }) {
+                            localBody = updated.body
+                        }
+                    },
+                    onOpenWikiLink: { targetTitle in
+                        if let target = store.notes.first(where: { $0.title.localizedCaseInsensitiveCompare(targetTitle) == .orderedSame }) {
+                            NoteWindowManager.shared.openNote(id: target.id)
+                        }
+                    },
+                    onEditRequest: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isMarkdownPreview = false
+                        }
+                    }
+                )
+                .background(Color.clear)
+            } else {
                 if #available(macOS 15.0, *) {
                     TextEditor(text: $localBody)
                         .font(editorFont)
@@ -855,41 +856,123 @@ public struct NoteEditorView: View {
 
     private var markdownFormatBar: some View {
         HStack(spacing: 3) {
-            formatButton(symbol: "bold", tooltip: "Kalın / Bold (**metin**) [⌘B]", action: {
-                insertMarkdown(prefix: "**", suffix: "**", placeholder: "kalın metin")
-            })
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 3) {
+                    formatButton(symbol: "bold", tooltip: "Kalın / Bold (**metin**) [⌘B]", action: {
+                        insertMarkdown(prefix: "**", suffix: "**", placeholder: "kalın metin")
+                    })
 
-            formatButton(symbol: "italic", tooltip: "İtalik / Italic (*metin*) [⌘I]", action: {
-                insertMarkdown(prefix: "*", suffix: "*", placeholder: "italik metin")
-            })
+                    formatButton(symbol: "italic", tooltip: "İtalik / Italic (*metin*) [⌘I]", action: {
+                        insertMarkdown(prefix: "*", suffix: "*", placeholder: "italik metin")
+                    })
 
-            formatButton(symbol: "strikethrough", tooltip: "Üstü Çizili (~~metin~~)", action: {
-                insertMarkdown(prefix: "~~", suffix: "~~", placeholder: "çizili metin")
-            })
+                    formatButton(symbol: "strikethrough", tooltip: "Üstü Çizili (~~metin~~)", action: {
+                        insertMarkdown(prefix: "~~", suffix: "~~", placeholder: "çizili metin")
+                    })
 
-            formatButton(symbol: "chevron.left.forwardslash.chevron.right", tooltip: "Satır İçi Kod (`kod`)", action: {
-                insertMarkdown(prefix: "`", suffix: "`", placeholder: "kod")
-            })
+                    formatButton(symbol: "highlighter", tooltip: loc.language == .turkish ? "Vurgula / Highlight (==metin==)" : "Highlight (==text==)", action: {
+                        insertMarkdown(prefix: "==", suffix: "==", placeholder: "vurgulu metin")
+                    })
 
-            formatButton(symbol: "number", tooltip: "Başlık / Heading (## Başlık)", action: {
-                insertMarkdown(prefix: "\n## ", suffix: "\n", placeholder: "Başlık")
-            })
+                    formatButton(symbol: "chevron.left.forwardslash.chevron.right", tooltip: "Satır İçi Kod (`kod`)", action: {
+                        insertMarkdown(prefix: "`", suffix: "`", placeholder: "kod")
+                    })
 
-            formatButton(symbol: "quote.opening", tooltip: "Alıntı / Quote (> alıntı)", action: {
-                insertMarkdown(prefix: "\n> ", suffix: "\n", placeholder: "alıntı")
-            })
+                    formatButton(symbol: "curlybraces", tooltip: loc.language == .turkish ? "Kod Bloğu (```kod```)" : "Code Block (```code```)", action: {
+                        insertRawMarkdown("```swift\n// Kod bloğu\n```")
+                    })
 
-            formatButton(symbol: "list.bullet", tooltip: "Madde İmleri (- liste)", action: {
-                insertMarkdown(prefix: "\n- ", suffix: "", placeholder: "madde")
-            })
+                    formatButton(symbol: "number", tooltip: "Başlık / Heading (## Başlık)", action: {
+                        insertMarkdown(prefix: "\n## ", suffix: "\n", placeholder: "Başlık")
+                    })
 
-            formatButton(symbol: "checklist", tooltip: "Görev Listesi (- [ ] görev)", action: {
-                insertMarkdown(prefix: "\n- [ ] ", suffix: "", placeholder: "yapılacak iş")
-            })
+                    // Table Popover Trigger
+                    Button(action: { showTablePopover.toggle() }) {
+                        Image(systemName: "tablecells")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(showTablePopover ? Color.accentColor : localColor.secondaryTextColor)
+                            .frame(width: 18, height: 18)
+                            .background(showTablePopover ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
+                            .cornerRadius(3)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.language == .turkish ? "Tablo Ekle (Matris / Şablonlar)" : "Insert Table (Grid / Presets)")
+                    .popover(isPresented: $showTablePopover) {
+                        TableInsertPopoverView(
+                            onInsertTable: { tableMarkdown in
+                                insertRawMarkdown(tableMarkdown)
+                                showTablePopover = false
+                                aiStatusMessage = loc.language == .turkish ? "Tablo nota eklendi ✨" : "Table inserted to note ✨"
+                            },
+                            onDismiss: {
+                                showTablePopover = false
+                            }
+                        )
+                    }
 
-            formatButton(symbol: "link", tooltip: "Bağlantı ([başlık](url))", action: {
-                insertMarkdown(prefix: "[", suffix: "](https://...)", placeholder: "bağlantı metni")
-            })
+                    // Callout / Info Box Menu
+                    Menu {
+                        Button(action: { insertCallout(type: .note) }) {
+                            Label(loc.language == .turkish ? "📌 Not Kutusu" : "📌 Note Callout", systemImage: "pin")
+                        }
+                        Button(action: { insertCallout(type: .tip) }) {
+                            Label(loc.language == .turkish ? "💡 İpucu Kutusu" : "💡 Tip Callout", systemImage: "lightbulb")
+                        }
+                        Button(action: { insertCallout(type: .warning) }) {
+                            Label(loc.language == .turkish ? "⚠️ Uyarı Kutusu" : "⚠️ Warning Callout", systemImage: "exclamationmark.triangle")
+                        }
+                        Button(action: { insertCallout(type: .important) }) {
+                            Label(loc.language == .turkish ? "⚡ Önemli Kutusu" : "⚡ Important Callout", systemImage: "bolt")
+                        }
+                        Button(action: { insertCallout(type: .success) }) {
+                            Label(loc.language == .turkish ? "✅ Başarı Kutusu" : "✅ Success Callout", systemImage: "checkmark.circle")
+                        }
+                        Button(action: { insertCallout(type: .info) }) {
+                            Label(loc.language == .turkish ? "ℹ️ Bilgi Kutusu" : "ℹ️ Info Callout", systemImage: "info.circle")
+                        }
+                    } label: {
+                        Image(systemName: "quote.bubble")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(localColor.secondaryTextColor)
+                            .frame(width: 18, height: 18)
+                            .background(Color.black.opacity(0.04))
+                            .cornerRadius(3)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .help(loc.language == .turkish ? "Bilgi / Uyarı Kutusu (Callout)" : "Callout Box (Note / Tip / Warning)")
+
+                    // Collapsible Toggle Block (<details>)
+                    formatButton(symbol: "chevron.right.circle", tooltip: loc.language == .turkish ? "Açılır/Kapanır Detay Bloğu (<details>)" : "Toggle List (<details>)", action: {
+                        let title = loc.language == .turkish ? "Detay Başlığı" : "Toggle Title"
+                        let desc = loc.language == .turkish ? "Gizli içerik buraya gelecek..." : "Hidden details go here..."
+                        insertRawMarkdown("<details>\n<summary>\(title)</summary>\n\(desc)\n</details>")
+                    })
+
+                    formatButton(symbol: "quote.opening", tooltip: "Alıntı / Quote (> alıntı)", action: {
+                        insertMarkdown(prefix: "\n> ", suffix: "\n", placeholder: "alıntı")
+                    })
+
+                    formatButton(symbol: "list.bullet", tooltip: "Madde İmleri (- liste)", action: {
+                        insertMarkdown(prefix: "\n- ", suffix: "", placeholder: "madde")
+                    })
+
+                    formatButton(symbol: "list.number", tooltip: loc.language == .turkish ? "Numaralı Liste (1. liste)" : "Numbered List (1. item)", action: {
+                        insertMarkdown(prefix: "\n1. ", suffix: "", placeholder: "madde")
+                    })
+
+                    formatButton(symbol: "checklist", tooltip: "Görev Listesi (- [ ] görev)", action: {
+                        insertMarkdown(prefix: "\n- [ ] ", suffix: "", placeholder: "yapılacak iş")
+                    })
+
+                    formatButton(symbol: "minus", tooltip: loc.language == .turkish ? "Yatay Ayırıcı Çizgi (---)" : "Horizontal Rule (---)", action: {
+                        insertRawMarkdown("---")
+                    })
+
+                    formatButton(symbol: "link", tooltip: "Bağlantı ([başlık](url))", action: {
+                        insertMarkdown(prefix: "[", suffix: "](https://...)", placeholder: "bağlantı metni")
+                    })
+                }
+            }
 
             Spacer()
 
@@ -935,6 +1018,9 @@ public struct NoteEditorView: View {
     }
 
     private func insertMarkdown(prefix: String, suffix: String, placeholder: String) {
+        if isMarkdownPreview {
+            isMarkdownPreview = false
+        }
         if localBody.isEmpty {
             localBody = "\(prefix)\(placeholder)\(suffix)"
         } else {
@@ -943,6 +1029,27 @@ public struct NoteEditorView: View {
             } else {
                 localBody += " \(prefix)\(placeholder)\(suffix)"
             }
+        }
+        persistChanges()
+    }
+
+    private func insertCallout(type: CalloutType) {
+        let isTr = loc.language == .turkish
+        let title = type.defaultTitle(isTurkish: isTr)
+        let sample = isTr ? "Açıklama veya detay metni..." : "Details or description text..."
+        let calloutText = "> [!\(type.rawValue.uppercased())] \(title)\n> \(sample)"
+        insertRawMarkdown(calloutText)
+        aiStatusMessage = isTr ? "\(title) kutusu eklendi ✨" : "\(title) callout added ✨"
+    }
+
+    private func insertRawMarkdown(_ text: String) {
+        if isMarkdownPreview {
+            isMarkdownPreview = false
+        }
+        if localBody.isEmpty {
+            localBody = text
+        } else {
+            localBody += "\n\n\(text)\n"
         }
         persistChanges()
     }
@@ -1067,6 +1174,20 @@ public struct NoteEditorView: View {
 
                     Divider()
 
+                    Button(action: { showTablePopover = true }) {
+                        Label(loc.language == .turkish ? "Tablo Ekle (Matris / Şablon)..." : "Insert Table (Grid / Presets)...", systemImage: "tablecells")
+                    }
+
+                    Button(action: {
+                        withAnimation {
+                            showMarkdownFormatBar.toggle()
+                        }
+                    }) {
+                        Label(showMarkdownFormatBar ? (loc.language == .turkish ? "Format Çubuğunu Gizle" : "Hide Format Bar") : (loc.language == .turkish ? "Format Çubuğunu Göster" : "Show Format Bar"), systemImage: "textformat")
+                    }
+
+                    Divider()
+
                     Button(action: { isCodeMode.toggle() }) {
                         Label(isCodeMode ? "Disable Code Mode" : "Enable Code Mode", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
@@ -1079,8 +1200,44 @@ public struct NoteEditorView: View {
                         Label(loc.language == .turkish ? "Ek/Dosyadan Metin Çıkar (OCR)" : "Extract OCR from Attachments", systemImage: "doc.text.viewfinder")
                     }
 
-                    Button(action: exportToCalendar) {
-                        Label("Add to Calendar (.ics)", systemImage: "calendar")
+                    Divider()
+
+                    // Export Options Submenu
+                    Menu {
+                        Button(action: exportAsPDF) {
+                            Label(loc.language == .turkish ? "📄 PDF Belgesi Olarak Kaydet (.pdf)..." : "Save as PDF Document (.pdf)...", systemImage: "doc.richtext")
+                        }
+                        Button(action: exportAsHTML) {
+                            Label(loc.language == .turkish ? "🌐 Web Sayfası Olarak Kaydet (.html)..." : "Save as HTML (.html)...", systemImage: "globe")
+                        }
+                        Button(action: exportAsMarkdown) {
+                            Label(loc.language == .turkish ? "📝 Markdown Olarak Kaydet (.md)..." : "Save as Markdown (.md)...", systemImage: "text.alignleft")
+                        }
+                        Button(action: exportAsRTF) {
+                            Label(loc.language == .turkish ? "📑 Zengin Metin Olarak Kaydet (.rtf)..." : "Save as Rich Text (.rtf)...", systemImage: "doc.text")
+                        }
+
+                        Divider()
+
+                        Button(action: printCurrentNote) {
+                            Label(loc.language == .turkish ? "🖨️ Yazdır / macOS PDF... [⌘P]" : "Print / PDF... [⌘P]", systemImage: "printer")
+                        }
+
+                        Divider()
+
+                        Button(action: exportToCalendar) {
+                            Label("Add to Calendar (.ics)", systemImage: "calendar")
+                        }
+
+                        Button(action: sendToAppleNotes) {
+                            Label("Export to Apple Notes", systemImage: "apple.logo")
+                        }
+
+                        Button(action: sendToReminders) {
+                            Label("Export to Apple Reminders", systemImage: "checklist")
+                        }
+                    } label: {
+                        Label(loc.language == .turkish ? "Dışa Aktar..." : "Export...", systemImage: "square.and.arrow.up")
                     }
 
                     Button(action: copyToClipboard) {
@@ -1089,16 +1246,6 @@ public struct NoteEditorView: View {
 
                     Button(action: shareNote) {
                         Label("Share...", systemImage: "square.and.arrow.up")
-                    }
-
-                    Divider()
-
-                    Button(action: sendToAppleNotes) {
-                        Label("Export to Apple Notes", systemImage: "apple.logo")
-                    }
-
-                    Button(action: sendToReminders) {
-                        Label("Export to Apple Reminders", systemImage: "checklist")
                     }
 
                     Divider()
@@ -1365,6 +1512,35 @@ public struct NoteEditorView: View {
         guard let note = currentNote else { return }
         CalendarSyncService.shared.openInCalendarApp(note: note)
         aiStatusMessage = loc.language == .turkish ? "Takvim etkinliği oluşturuldu (.ics)" : "Calendar event generated (.ics)"
+    }
+
+    private func exportAsPDF() {
+        guard let note = currentNote else { return }
+        ExportService.shared.promptSaveNoteAsPDF(note: note)
+        aiStatusMessage = loc.language == .turkish ? "PDF dışa aktarma hazırlandı" : "PDF export prepared"
+    }
+
+    private func exportAsHTML() {
+        guard let note = currentNote else { return }
+        ExportService.shared.promptSaveNoteAsHTML(note: note)
+        aiStatusMessage = loc.language == .turkish ? "HTML dışa aktarma hazırlandı" : "HTML export prepared"
+    }
+
+    private func exportAsMarkdown() {
+        guard let note = currentNote else { return }
+        ExportService.shared.promptSaveNoteAsMarkdown(note: note)
+        aiStatusMessage = loc.language == .turkish ? "Markdown dışa aktarma hazırlandı" : "Markdown export prepared"
+    }
+
+    private func exportAsRTF() {
+        guard let note = currentNote else { return }
+        ExportService.shared.promptSaveNoteAsRTF(note: note)
+        aiStatusMessage = loc.language == .turkish ? "RTF dışa aktarma hazırlandı" : "RTF export prepared"
+    }
+
+    private func printCurrentNote() {
+        guard let note = currentNote else { return }
+        ExportService.shared.printNote(note: note)
     }
 
     // MARK: - Actions & Helpers

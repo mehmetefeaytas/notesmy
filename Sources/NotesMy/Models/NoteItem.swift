@@ -142,22 +142,54 @@ public struct NoteItem: Identifiable, Codable, Equatable, Hashable, Sendable {
 
     public var previewSnippet: String {
         let lines = body.components(separatedBy: .newlines)
-            .map { line -> String in
+            .compactMap { line -> String? in
                 var clean = line.trimmingCharacters(in: .whitespaces)
+                if clean.isEmpty { return nil }
+
+                // Ignore table separator lines like | --- | :---: |
+                if TableMarkdownHelper.isTableSeparator(line: clean) {
+                    return nil
+                }
+
+                // Clean table rows: | Col 1 | Col 2 | -> Col 1 · Col 2
+                if clean.contains("|") {
+                    let cells = TableMarkdownHelper.splitRow(clean)
+                    if !cells.isEmpty {
+                        clean = cells.joined(separator: " · ")
+                    }
+                }
+
+                // Strip Callout headers
+                if clean.hasPrefix("> [!") && clean.contains("]") {
+                    if let end = clean.range(of: "]") {
+                        clean = String(clean[end.upperBound...]).trimmingCharacters(in: .whitespaces)
+                        if clean.isEmpty { return nil }
+                    }
+                } else if clean.hasPrefix("> ") {
+                    clean = String(clean.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                }
+
+                // Strip HTML toggle tags
+                clean = clean.replacingOccurrences(of: "<details>", with: "")
+                clean = clean.replacingOccurrences(of: "</details>", with: "")
+                clean = clean.replacingOccurrences(of: "<summary>", with: "")
+                clean = clean.replacingOccurrences(of: "</summary>", with: "")
+
                 if clean.hasPrefix("#") {
                     clean = clean.trimmingCharacters(in: CharacterSet(charactersIn: "# "))
                 }
                 clean = clean.replacingOccurrences(of: "**", with: "")
                 clean = clean.replacingOccurrences(of: "~~", with: "")
+                clean = clean.replacingOccurrences(of: "==", with: "")
                 clean = clean.replacingOccurrences(of: "`", with: "")
                 if clean.hasPrefix("- [ ] ") || clean.hasPrefix("- [x] ") || clean.hasPrefix("- [X] ") {
                     clean = String(clean.dropFirst(6))
                 } else if clean.hasPrefix("- ") || clean.hasPrefix("* ") {
                     clean = String(clean.dropFirst(2))
                 }
-                return clean
+                clean = clean.trimmingCharacters(in: .whitespaces)
+                return clean.isEmpty ? nil : clean
             }
-            .filter { !$0.isEmpty }
         if lines.isEmpty { return "Empty note..." }
         return lines.prefix(3).joined(separator: " · ")
     }

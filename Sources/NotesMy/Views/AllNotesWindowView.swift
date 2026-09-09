@@ -204,10 +204,13 @@ public struct AllNotesWindowView: View {
                 .help("Create Note (⌥⌘N)")
 
                 Menu {
-                    Button("Export as Markdown (.md)") {
+                    Button(loc.language == .turkish ? "📄 Tüm Notları PDF Olarak Kaydet (.pdf)..." : "Export All Notes as PDF (.pdf)...") {
+                        exportAllAsPDF()
+                    }
+                    Button(loc.language == .turkish ? "📤 Markdown Klasörü Olarak Dışa Aktar (.md)" : "Export as Markdown (.md)") {
                         exportMarkdown()
                     }
-                    Button("Export as Single Document (.txt)") {
+                    Button(loc.language == .turkish ? "💾 Tek Metin Belgesi Olarak Dışa Aktar (.txt)" : "Export as Single Document (.txt)") {
                         exportSingleDocument()
                     }
                     Divider()
@@ -217,7 +220,7 @@ public struct AllNotesWindowView: View {
                         }
                     }
                 } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
+                    Label(loc.language == .turkish ? "Dışa Aktar" : "Export", systemImage: "square.and.arrow.up")
                 }
             }
         }
@@ -663,6 +666,19 @@ public struct AllNotesWindowView: View {
                 }
             }
             Divider()
+            Button(loc.language == .turkish ? "📄 PDF Olarak Kaydet..." : "Save as PDF...") {
+                ExportService.shared.promptSaveNoteAsPDF(note: note)
+            }
+            Button(loc.language == .turkish ? "🌐 HTML Olarak Kaydet..." : "Save as HTML...") {
+                ExportService.shared.promptSaveNoteAsHTML(note: note)
+            }
+            Button(loc.language == .turkish ? "📝 Markdown Olarak Kaydet..." : "Save as Markdown...") {
+                ExportService.shared.promptSaveNoteAsMarkdown(note: note)
+            }
+            Button(loc.language == .turkish ? "🖨️ Yazdır / PDF..." : "Print / PDF...") {
+                ExportService.shared.printNote(note: note)
+            }
+            Divider()
             Button(role: .destructive) {
                 store.deleteNote(id: note.id)
             } label: {
@@ -735,6 +751,10 @@ public struct AllNotesWindowView: View {
     }
 
     // MARK: - Export Helpers
+
+    private func exportAllAsPDF() {
+        ExportService.shared.promptExportAllAsPDF(notes: filteredNotes)
+    }
 
     private func exportMarkdown() {
         let panel = NSOpenPanel()

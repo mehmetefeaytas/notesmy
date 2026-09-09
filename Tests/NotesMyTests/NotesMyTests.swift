@@ -346,4 +346,146 @@ struct NotesMyTests {
         #expect(snippet.contains("Header 1"))
         #expect(snippet.contains("bold text"))
     }
+
+    @Test("TableMarkdownHelper generation, alignments, and CSV/TSV export")
+    func testTableMarkdownHelper() {
+        // Test Table Generation
+        let tableMD = TableMarkdownHelper.generateMarkdown(cols: 3, rows: 2, isTurkish: true)
+        #expect(tableMD.contains("| Başlık 1 | Başlık 2 | Başlık 3 |"))
+        #expect(tableMD.contains("| :--- | :--- | :--- |"))
+        #expect(tableMD.contains("| Veri 1.1 | Veri 1.2 | Veri 1.3 |"))
+        #expect(tableMD.contains("| Veri 2.1 | Veri 2.2 | Veri 2.3 |"))
+
+        // Test Separator Detection
+        #expect(TableMarkdownHelper.isTableSeparator(line: "| :--- | :---: | ---: |"))
+        #expect(TableMarkdownHelper.isTableSeparator(line: "--- | --- | ---"))
+        #expect(!TableMarkdownHelper.isTableSeparator(line: "| Normal | Row |"))
+        #expect(!TableMarkdownHelper.isTableSeparator(line: "Hello world"))
+
+        // Test Alignment Parsing
+        let alignments = TableMarkdownHelper.parseAlignments(separatorLine: "| :--- | :---: | ---: |")
+        #expect(alignments.count == 3)
+        #expect(alignments[0] == .left)
+        #expect(alignments[1] == .center)
+        #expect(alignments[2] == .right)
+
+        // Test CSV & TSV Export
+        let tableData = MarkdownTableData(
+            headers: ["Feature", "Status", "Notes"],
+            alignments: [.left, .center, .left],
+            rows: [
+                ["Table Support", "Done", "Works with CSV, TSV"],
+                ["Callouts", "Done", "Notion-style"]
+            ]
+        )
+        let csv = tableData.toCSV()
+        #expect(csv.contains("Feature,Status,Notes"))
+        #expect(csv.contains("\"Works with CSV, TSV\""))
+
+        let tsv = tableData.toTSV()
+        #expect(tsv.contains("Feature\tStatus\tNotes"))
+        #expect(tsv.contains("Table Support\tDone\tWorks with CSV, TSV"))
+
+        // Test Built-in Presets
+        #expect(TableMarkdownHelper.builtInPresets.count >= 5)
+        #expect(TableMarkdownHelper.builtInPresets.contains(where: { $0.id == "comparison" }))
+        #expect(TableMarkdownHelper.builtInPresets.contains(where: { $0.id == "budget_tracker" }))
+    }
+
+    @Test("NoteItem table and highlight snippet cleaning")
+    func testTableAndHighlightSnippetCleaning() {
+        let noteWithTable = NoteItem(
+            title: "Project Plan",
+            body: """
+            ## Sprint Overview
+            ==High Priority== update for release.
+            > [!NOTE]
+            > Review table below before merge.
+            | Task | Status |
+            | :--- | :---: |
+            | App Store submission | In Progress |
+            """
+        )
+        let snippet = noteWithTable.previewSnippet
+        #expect(!snippet.contains("=="))
+        #expect(!snippet.contains("| :---"))
+        #expect(!snippet.contains("> [!NOTE]"))
+        #expect(snippet.contains("High Priority"))
+        #expect(snippet.contains("Task · Status") || snippet.contains("Sprint Overview"))
+    }
+
+    @Test("NoteTemplate table templates coverage")
+    func testNoteTemplatesWithTables() {
+        let templates = NoteTemplate.builtInTemplates
+        let roadmap = templates.first(where: { $0.id == "project_roadmap" })
+        let budget = templates.first(where: { $0.id == "budget_planner" })
+        let habit = templates.first(where: { $0.id == "habit_tracker" })
+
+        #expect(roadmap != nil)
+        #expect(budget != nil)
+        #expect(habit != nil)
+
+        #expect(roadmap?.bodyTemplate.contains("| Feature |") == true)
+        #expect(budget?.bodyTemplate.contains("| Expense Item |") == true)
+        #expect(habit?.bodyTemplate.contains("| Habit / Routine |") == true)
+    }
+
+    @Test("ExportService HTML, PDF, RTF and Markdown generation")
+    @MainActor
+    func testExportService() {
+        let note = NoteItem(
+            title: "Q3 Release Strategy",
+            body: """
+            # Strategy Overview
+            This is a **high priority** deliverable with ==highlighted goals==.
+
+            > [!NOTE]
+            > Ensure test coverage before releasing to GitHub.
+
+            | Module | Status | Priority |
+            | :--- | :---: | ---: |
+            | Table Formatting | Done | High |
+            | PDF Export | Done | Critical |
+
+            - [x] Complete Swift unit tests
+            - [ ] Deploy DMG to GitHub releases
+            """,
+            color: .amber,
+            tags: ["release", "v1.7.0"],
+            category: "Work"
+        )
+
+        // Test HTML generation
+        let html = ExportService.shared.exportNoteToHTML(note: note)
+        #expect(html.contains("Q3 Release Strategy"))
+        #expect(html.contains("<table"))
+        #expect(html.contains("Table Formatting"))
+        #expect(html.contains("callout callout-note"))
+        #expect(html.contains("<mark>highlighted goals</mark>"))
+        #expect(html.contains("task-list-item"))
+
+        // Test Markdown with YAML Frontmatter
+        let md = ExportService.shared.exportNoteToMarkdownString(note: note)
+        #expect(md.hasPrefix("---"))
+        #expect(md.contains("title: \"Q3 Release Strategy\""))
+        #expect(md.contains("category: \"Work\""))
+        #expect(md.contains("# Q3 Release Strategy"))
+
+        // Test PDF Data generation
+        let pdfData = ExportService.shared.exportNoteToPDFData(note: note)
+        #expect(pdfData != nil)
+        #expect(pdfData!.count > 1000)
+        let pdfHeader = String(data: pdfData!.prefix(5), encoding: .ascii)
+        #expect(pdfHeader == "%PDF-")
+
+        // Test RTF Data generation
+        let rtfData = ExportService.shared.exportNoteToRTFData(note: note)
+        #expect(rtfData != nil)
+        #expect(rtfData!.count > 500)
+
+        // Test Multiple Notes PDF generation
+        let multiPDF = ExportService.shared.exportMultipleNotesToPDFData(notes: [note], bookTitle: "Archive 2026")
+        #expect(multiPDF != nil)
+        #expect(multiPDF!.count > 1000)
+    }
 }

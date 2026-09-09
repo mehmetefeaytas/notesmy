@@ -234,6 +234,125 @@ public struct NoteTemplate: Identifiable, Sendable {
             - [ ] Birim test ekle
             - [ ] Düzeltmeyi uygula ve yayınla
             """
+        ),
+        NoteTemplate(
+            id: "project_roadmap",
+            title: "Project Roadmap & Sprint",
+            titleTr: "Proje Yol Haritası & Sprint",
+            icon: "flag.checkered",
+            category: "Work",
+            bodyTemplate: """
+            ## 🚀 Project Roadmap: [Milestone]
+            > [!NOTE]
+            > High-level roadmap and feature status for the upcoming release.
+
+            ### 📊 Milestone & Feature Matrix
+            | Feature | Owner | Priority | Status |
+            | :--- | :--- | :---: | :---: |
+            | Markdown Table Support | @Engineer | 🔴 High | ✅ Done |
+            | Notion-style Callouts | @Design | 🟡 Medium | ⏳ In Progress |
+            | Export to CSV / Markdown | @Team | 🟢 Low | 📝 Backlog |
+
+            ### 🎯 Target Release Date: \(Date().addingTimeInterval(86400 * 14).formatted(date: .abbreviated, time: .omitted))
+            - [ ] Complete integration tests
+            - [ ] Create GitHub release tag
+            """,
+            bodyTemplateTr: """
+            ## 🚀 Proje Yol Haritası: [Aşama / Sürüm]
+            > [!NOTE]
+            > Yaklaşan sürüm için ana hedefler ve teslimat tablosu.
+
+            ### 📊 Teslimat & Durum Tablosu
+            | Özellik / Görev | Sorumlu | Öncelik | Durum |
+            | :--- | :--- | :---: | :---: |
+            | Tablo Desteği & Format Barı | @Efe | 🔴 Yüksek | ✅ Tamamlandı |
+            | Notion Tarzı Bilgi Kutuları | @Tasarım | 🟡 Orta | ⏳ Devam Ediyor |
+            | CSV / MD Olarak Dışa Aktarma | @Ekip | 🟢 Düşük | 📝 Bekliyor |
+
+            ### 🎯 Hedef Yayın Tarihi: \(Date().addingTimeInterval(86400 * 14).formatted(date: .abbreviated, time: .omitted))
+            - [ ] Entegrasyon testlerini tamamla
+            - [ ] GitHub sürüm etiketini oluştur
+            """
+        ),
+        NoteTemplate(
+            id: "budget_planner",
+            title: "Budget & Expense Sheet",
+            titleTr: "Bütçe & Harcama Tablosu",
+            icon: "creditcard.fill",
+            category: "Personal",
+            bodyTemplate: """
+            ## 💰 Budget & Expense Tracker
+            > [!TIP]
+            > Keep track of ongoing subscriptions and project costs.
+
+            ### 💳 Expenses Matrix
+            | Expense Item | Category | Amount ($) | Status |
+            | :--- | :--- | ---: | :---: |
+            | Cloud Server & Storage | Infrastructure | 45.00 | ✅ Paid |
+            | Domain Renewal | Hosting | 14.99 | ✅ Paid |
+            | Design Tools & Fonts | Assets | 30.00 | ⏳ Pending |
+            | **Total** | - | **$89.99** | - |
+
+            ### 📌 Financial Goals
+            - [ ] Keep monthly infra spend under $100
+            - [ ] Review unused SaaS subscriptions
+            """,
+            bodyTemplateTr: """
+            ## 💰 Bütçe & Harcama Tablosu
+            > [!TIP]
+            > Aylık sabit giderleri ve proje masraflarını takip edin.
+
+            ### 💳 Harcama Kalemleri
+            | Harcama Kalemi | Kategori | Tutar (₺) | Durum |
+            | :--- | :--- | ---: | :---: |
+            | Bulut Sunucu & Veritabanı | Altyapı | 1.250 | ✅ Ödendi |
+            | Alan Adı (Domain) Yenileme | Domain | 450 | ✅ Ödendi |
+            | Tasarım & Görsel Lisansı | Varlıklar | 800 | ⏳ Bekliyor |
+            | **Genel Toplam** | - | **2.500 ₺** | - |
+
+            ### 📌 Tasarruf Hedefleri
+            - [ ] Aylık altyapı maliyetini bütçe sınırında tut
+            - [ ] Kullanılmayan SaaS aboneliklerini iptal et
+            """
+        ),
+        NoteTemplate(
+            id: "habit_tracker",
+            title: "Weekly Habit & Health Tracker",
+            titleTr: "Haftalık Alışkanlık & Hedefler",
+            icon: "flame.fill",
+            category: "Personal",
+            bodyTemplate: """
+            ## 🔥 Weekly Habit Tracker
+            > [!SUCCESS]
+            > Consistency beats intensity. Track your daily wins!
+
+            ### 📅 Daily Consistency Matrix
+            | Habit / Routine | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+            | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+            | 🏃 30m Exercise | ✅ | ✅ | ⏳ | - | - | - | - |
+            | 📖 Read 20 Pages | ✅ | ✅ | ✅ | - | - | - | - |
+            | 💻 90m Deep Work | ✅ | ✅ | ⏳ | - | - | - | - |
+            | 💧 2.5L Water | ✅ | ⏳ | - | - | - | - | - |
+
+            ### 💡 Reflection
+            - What habit was easiest to stick to this week?
+            """,
+            bodyTemplateTr: """
+            ## 🔥 Haftalık Alışkanlık & Hedefler
+            > [!SUCCESS]
+            > Küçük ve düzenli adımlar büyük başarılar getirir!
+
+            ### 📅 Günlük Alışkanlık Takip Tablosu
+            | Alışkanlık / Rutin | Pzt | Sal | Çar | Per | Cum | Cmt | Paz |
+            | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+            | 🏃 30 Dk Spor / Yürüyüş | ✅ | ✅ | ⏳ | - | - | - | - |
+            | 📖 20 Sayfa Kitap Oku | ✅ | ✅ | ✅ | - | - | - | - |
+            | 💻 90 Dk Derin Çalışma | ✅ | ✅ | ⏳ | - | - | - | - |
+            | 💧 2.5 Litre Su İç | ✅ | ⏳ | - | - | - | - | - |
+
+            ### 💡 Hafta Sonu Değerlendirmesi
+            - Bu hafta hangi alışkanlıkta en istikrarlıydın?
+            """
         )
     ]
 }

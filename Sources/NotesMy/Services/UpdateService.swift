@@ -96,7 +96,7 @@ public final class UpdateService: NSObject, ObservableObject, URLSessionDownload
         if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, !version.isEmpty {
             return version
         }
-        return "1.6.2"
+        return "1.7.0"
     }
 
     private override init() {
