@@ -232,16 +232,16 @@ public struct MeetingStudioView: View {
                 // Screen Capture System Audio Warning if Online Mode
                 if (selectedMode == .online || selectedMode == .systemOnly) && !meetingService.hasSystemAudioPermission {
                     HStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle.fill")
+                        Image(systemName: "info.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(.orange)
+                            .foregroundColor(.blue)
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(isTR ? "Ekran / Sistem Sesi İzni (Zoom & Teams)" : "Screen & System Audio Permission Required")
+                            Text(isTR ? "Online Toplantı Ses Yakalama (Zoom & Teams)" : "Online Meeting Audio Capture (Zoom & Teams)")
                                 .font(.system(size: 13, weight: .bold))
                             Text(isTR
-                                 ? "Zoom, Teams ve Google Meet'teki karşı tarafın sesini doğrudan yakalayabilmek için macOS Ekran Kaydı izni verin. İzin verdikten sonra uygulamanın yeniden başlatılması gerekebilir."
-                                 : "To capture voices from Zoom, Teams and Google Meet, please grant macOS Screen Recording permission in System Settings.")
+                                 ? "Zoom/Teams karşı taraf sesini doğrudan sistemden yakalamak için Ekran Kaydı izni gerekir. Ayarlardan izin verdiyseniz geçerli olması için uygulamayı yeniden başlatın. İzin olmadan da mikrofonunuz üzerinden toplantı kaydedilebilir."
+                                 : "Screen Recording is required to capture remote voices directly from Zoom/Teams. If already allowed in Settings, restart the app to apply. You can also record via microphone without it.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -249,9 +249,14 @@ public struct MeetingStudioView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
-                            Button(isTR ? "Ayarları Aç (İzin Ver)" : "Open Settings") {
-                                _ = meetingService.requestScreenCapturePermission()
+                            Button(isTR ? "Ayarları Aç" : "Open Settings") {
                                 meetingService.openScreenCaptureSettings()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+
+                            Button(isTR ? "Yeniden Başlat" : "Restart App") {
+                                meetingService.restartApp()
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.small)
@@ -264,7 +269,7 @@ public struct MeetingStudioView: View {
                         }
                     }
                     .padding(12)
-                    .background(Color.orange.opacity(0.1))
+                    .background(Color.blue.opacity(0.08))
                     .cornerRadius(8)
                 }
 
@@ -820,7 +825,7 @@ public struct MeetingStudioView: View {
                 language: selectedLanguage
             )
             if !success {
-                showToast(isTR ? "Kayıt başlatılamadı. Lütfen izinleri kontrol edin." : "Failed to start. Check permissions.")
+                showToast(isTR ? "Kayıt başlatılamadı. Lütfen mikrofon iznini kontrol edin." : "Failed to start. Check microphone permission.")
             }
         }
     }

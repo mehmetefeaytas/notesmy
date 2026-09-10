@@ -184,6 +184,16 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         }
     }
 
+    public func restartApp() {
+        let url = Bundle.main.bundleURL
+        let config = NSWorkspace.OpenConfiguration()
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in
+            DispatchQueue.main.async {
+                NSApplication.shared.terminate(nil)
+            }
+        }
+    }
+
     public func requestAllPermissions() async -> Bool {
         // 1. Microphone
         let mic = await requestMicPermission()
@@ -232,10 +242,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
             self.hasSystemAudioPermission = true
             return true
         }
-        let requested = CGRequestScreenCaptureAccess()
-        if !requested {
-            openScreenCaptureSettings()
-        }
+        _ = CGRequestScreenCaptureAccess()
         self.hasSystemAudioPermission = CGPreflightScreenCaptureAccess()
         return self.hasSystemAudioPermission
     }
@@ -249,6 +256,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         language: AppLanguage = LocalizationService.shared.language
     ) async -> Bool {
         _ = stopMeeting()
+        AudioRecordingService.shared.stopRecording()
 
         self.selectedMode = mode
         self.meetingTitle = title.isEmpty ? defaultMeetingTitle() : title
@@ -261,8 +269,14 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         self.meetingStartDate = Date()
         self.recordingNotice = nil
 
-        // Attempt permission check/requests without blocking if any audio capture is possible
-        _ = await requestAllPermissions()
+        // Cleanly prompt for mic/speech if not yet determined (without popping open settings)
+        if !hasMicPermission {
+            _ = await requestMicPermission()
+        }
+        if !hasSpeechPermission {
+            _ = await requestSpeechPermission()
+        }
+        checkExistingPermissions()
 
         let locale = Locale(identifier: language.speechLocale)
         setupSpeechRecognizers(locale: locale)
@@ -285,7 +299,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         }
 
         guard micSuccess || systemSuccess else {
-            print("MeetingRecordingService: Failed to start both audio sources (mic: \(micSuccess), sys: \(systemSuccess))")
+            print("MeetingRecordingService: Failed to start audio sources (mic: \(micSuccess), sys: \(systemSuccess))")
             cleanupAll()
             return false
         }
@@ -293,8 +307,8 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         let isTR = LocalizationService.shared.language == .turkish
         if mode == .online && !systemSuccess && micSuccess {
             self.recordingNotice = isTR
-                ? "Toplantı mikrofonunuz üzerinden kaydediliyor. Zoom/Teams'deki karşı tarafın sesini doğrudan yakalamak için Sistem Ayarları'ndan Ekran Kaydı izni verin."
-                : "Recording via microphone. To capture remote voices directly from Zoom/Teams, grant Screen Recording in System Settings."
+                ? "Toplantı mikrofonunuz üzerinden kaydediliyor. Zoom/Teams sesini doğrudan yakalamak için sistem ayarlarından Ekran Kaydı iznini verip uygulamayı yeniden başlatabilirsiniz."
+                : "Recording via microphone. To capture remote voices directly from Zoom/Teams, grant Screen Recording in System Settings and restart the app."
         }
 
         // Start Elapsed Timer
@@ -385,21 +399,20 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
 
     // MARK: - ScreenCaptureKit System Audio Capture
     private func startSystemAudioCapture() async -> Bool {
-        guard CGPreflightScreenCaptureAccess() else {
-            print("Screen capture permission not granted. System audio unavailable.")
-            self.hasSystemAudioPermission = false
-            return false
-        }
-
         do {
-            let content: SCShareableContent = try await withCheckedThrowingContinuation { cont in
-                SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { scContent, scError in
-                    if let scError = scError {
-                        cont.resume(throwing: scError)
-                    } else if let scContent = scContent {
-                        cont.resume(returning: scContent)
-                    } else {
-                        cont.resume(throwing: NSError(domain: "NotesMy", code: -1, userInfo: nil))
+            let content: SCShareableContent
+            if #available(macOS 14.0, *) {
+                content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            } else {
+                content = try await withCheckedThrowingContinuation { cont in
+                    SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { scContent, scError in
+                        if let scError = scError {
+                            cont.resume(throwing: scError)
+                        } else if let scContent = scContent {
+                            cont.resume(returning: scContent)
+                        } else {
+                            cont.resume(throwing: NSError(domain: "NotesMy", code: -1, userInfo: nil))
+                        }
                     }
                 }
             }
@@ -468,8 +481,9 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
 
     // MARK: - Speech Transcription Aggregation
     private func handleSpeechTranscription(text: String, speaker: MeetingSpeaker, isFinal: Bool) {
-        guard !text.isEmpty else { return }
-        self.activeLiveTranscript = text
+        let cleanText = filterPhantomSpeech(text)
+        guard !cleanText.isEmpty else { return }
+        self.activeLiveTranscript = cleanText
 
         let currentElapsed = self.elapsedSeconds
 
@@ -477,17 +491,47 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         if let lastIndex = transcriptEntries.indices.last,
            transcriptEntries[lastIndex].speaker == speaker,
            !transcriptEntries[lastIndex].isFinal {
-            transcriptEntries[lastIndex].text = text
+            transcriptEntries[lastIndex].text = cleanText
             transcriptEntries[lastIndex].isFinal = isFinal
         } else {
             let entry = MeetingTranscriptEntry(
                 timestamp: currentElapsed,
                 speaker: speaker,
-                text: text,
+                text: cleanText,
                 isFinal: isFinal
             )
             transcriptEntries.append(entry)
         }
+    }
+
+    private func filterPhantomSpeech(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        let lowerPunct = trimmed.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: " .,!?-:;\"'"))
+
+        // Common macOS speech recognizer acoustic hallucination tokens when no speech has occurred yet
+        let phantomWords: Set<String> = ["evet", "evet evet", "yes", "ıı", "hı", "hıhı", "ee", "e", "şey"]
+        if (elapsedSeconds < 4.5 || transcriptEntries.isEmpty) && phantomWords.contains(lowerPunct) {
+            return ""
+        }
+
+        // If recognizer prepends "Evet, " or "Evet. " or "Evet " to the very beginning of the meeting
+        if (elapsedSeconds < 4.0 && transcriptEntries.isEmpty) {
+            let lower = trimmed.lowercased()
+            if lower.hasPrefix("evet, ") {
+                let stripped = String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                return filterPhantomSpeech(stripped)
+            } else if lower.hasPrefix("evet. ") {
+                let stripped = String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                return filterPhantomSpeech(stripped)
+            } else if lower.hasPrefix("evet ") {
+                let stripped = String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+                return filterPhantomSpeech(stripped)
+            }
+        }
+
+        return trimmed
     }
 
     // MARK: - Pause & Resume

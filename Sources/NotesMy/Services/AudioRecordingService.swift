@@ -58,25 +58,22 @@ public final class AudioRecordingService: NSObject, ObservableObject {
 
     public func requestPermissions() async -> Bool {
         let micGranted = await Self.requestMicrophoneAuth()
-        let speechGranted = await Self.requestSpeechAuth()
-        return micGranted && speechGranted
+        _ = await Self.requestSpeechAuth()
+        return micGranted
     }
 
     nonisolated private static func requestMicrophoneAuth() async -> Bool {
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        if status == .authorized { return true }
+        if status == .denied || status == .restricted { return false }
+
+        let granted = await AVCaptureDevice.requestAccess(for: .audio)
+        if granted { return true }
+
         if #available(macOS 14.0, *) {
-            switch AVAudioApplication.shared.recordPermission {
-            case .granted:
-                return true
-            case .denied:
-                return false
-            case .undetermined:
-                return await AVAudioApplication.requestRecordPermission()
-            @unknown default:
-                return await AVAudioApplication.requestRecordPermission()
-            }
-        } else {
-            return true
+            return await AVAudioApplication.requestRecordPermission()
         }
+        return false
     }
 
     nonisolated private static func requestSpeechAuth() async -> Bool {
@@ -150,14 +147,14 @@ public final class AudioRecordingService: NSObject, ObservableObject {
         if let recognizer = speechRecognizer, recognizer.isAvailable {
             recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
                 Task { @MainActor [weak self] in
-                    guard let self = self else { return }
+                    guard let self = self, self.isRecording else { return }
                     if let result = result {
                         let text = result.bestTranscription.formattedString
-                        self.liveTranscript = text
-                        onTranscription(text)
-                    }
-                    if error != nil || result?.isFinal == true {
-                        _ = self.stopRecording()
+                        let clean = self.filterPhantomSpeech(text)
+                        if !clean.isEmpty {
+                            self.liveTranscript = clean
+                            onTranscription(clean)
+                        }
                     }
                 }
             }
@@ -212,5 +209,28 @@ public final class AudioRecordingService: NSObject, ObservableObject {
             }
             audioEngine = nil
         }
+    }
+
+    private func filterPhantomSpeech(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        let lowerPunct = trimmed.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: " .,!?-:;\"'"))
+        let phantomWords: Set<String> = ["evet", "evet evet", "yes", "ıı", "hı", "hıhı", "ee", "e", "şey"]
+        if liveTranscript.isEmpty && phantomWords.contains(lowerPunct) {
+            return ""
+        }
+
+        if liveTranscript.isEmpty {
+            let lower = trimmed.lowercased()
+            if lower.hasPrefix("evet, ") {
+                return String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+            } else if lower.hasPrefix("evet. ") {
+                return String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+            } else if lower.hasPrefix("evet ") {
+                return String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return trimmed
     }
 }
