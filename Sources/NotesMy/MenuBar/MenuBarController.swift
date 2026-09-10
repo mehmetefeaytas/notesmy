@@ -60,6 +60,27 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         screenOCRItem.target = self
         menu.addItem(screenOCRItem)
 
+        // 4. Meeting Studio & AI Intelligence
+        let meetingService = MeetingRecordingService.shared
+        if meetingService.isRecording {
+            let recordingItem = NSMenuItem(
+                title: isTR ? "🔴 Toplantı Kaydediliyor (\(meetingService.formattedDuration))..." : "🔴 Meeting Recording Active (\(meetingService.formattedDuration))...",
+                action: #selector(handleOpenMeetingStudio),
+                keyEquivalent: ""
+            )
+            recordingItem.target = self
+            menu.addItem(recordingItem)
+        }
+
+        let meetingItem = NSMenuItem(
+            title: isTR ? "🎙️ Toplantı Modu: Kaydet & Özetle..." : "🎙️ Meeting Studio: Record & AI Recap...",
+            action: #selector(handleOpenMeetingStudio),
+            keyEquivalent: "m"
+        )
+        meetingItem.keyEquivalentModifierMask = [.option, .command]
+        meetingItem.target = self
+        menu.addItem(meetingItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let captureItem = NSMenuItem(title: isTR ? "Panoyu Not Olarak Yakala" : "Quick Capture from Clipboard", action: #selector(handleQuickCapture), keyEquivalent: "v")
@@ -176,6 +197,10 @@ public final class MenuBarController: NSObject, NSMenuDelegate {
         Task {
             _ = await OCRService.shared.captureScreenAndExtractText()
         }
+    }
+
+    @objc private func handleOpenMeetingStudio() {
+        MeetingStudioWindowManager.shared.show()
     }
 
     @objc private func handleStickyBoard() {

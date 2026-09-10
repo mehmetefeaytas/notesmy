@@ -267,6 +267,15 @@ public struct NoteEditorView: View {
             .buttonStyle(.plain)
             .help(isRecordingVoice ? loc.text(.speechStop) : loc.text(.speechRecord))
 
+            // Meeting Studio Button
+            Button(action: { MeetingStudioWindowManager.shared.show() }) {
+                Image(systemName: "person.2.wave.2")
+                    .font(.system(size: 11))
+                    .foregroundColor(localColor.secondaryTextColor)
+            }
+            .buttonStyle(.plain)
+            .help(loc.language == .turkish ? "Toplantı Stüdyosu (Zoom / Teams / Yüz yüze)" : "Meeting Studio (Zoom / Teams / In-Person)")
+
             // Templates Button
             Button(action: { showTemplatePicker.toggle() }) {
                 Image(systemName: "square.dashed.inset.filled")
@@ -364,6 +373,14 @@ public struct NoteEditorView: View {
                     applyAIRewrite(style: .bulletPoints)
                 } label: {
                     Label("Convert to Bullet Points", systemImage: "list.bullet")
+                }
+            }
+
+            Section(loc.language == .turkish ? "Toplantı & Transkripsiyon" : "Meeting & Live Transcribe") {
+                Button {
+                    MeetingStudioWindowManager.shared.show()
+                } label: {
+                    Label(loc.language == .turkish ? "Toplantı Stüdyosu (Zoom / Teams)..." : "Meeting Studio (Zoom / Teams)...", systemImage: "person.2.wave.2")
                 }
             }
         } label: {

@@ -90,6 +90,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         case "deck:collapse":
             NoteStore.shared.isDeckHovered = false
             EdgeDeckWindowManager.shared.updatePanelFrame(isExpanded: false)
+        case "show:meeting":
+            MeetingStudioWindowManager.shared.show()
         case "close:all":
             for note in NoteStore.shared.notes {
                 NoteWindowManager.shared.closeNote(id: note.id)
@@ -176,6 +178,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let toggleDeckKey = store.hotKey(for: .toggleDeck)
         HotKeyManager.shared.registerHotKey(keyCode: toggleDeckKey.keyCode, modifiers: toggleDeckKey.modifiers) {
             EdgeDeckWindowManager.shared.toggleVisibility()
+        }
+
+        // Meeting Studio (Option + Command + M)
+        HotKeyManager.shared.registerHotKey(keyCode: 0x2E, modifiers: UInt32(cmdKey | optionKey)) {
+            MeetingStudioWindowManager.shared.show()
         }
     }
 }

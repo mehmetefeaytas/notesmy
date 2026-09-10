@@ -29,8 +29,8 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Mehmet Efe Aytaş. Apache 2.0 Licensed.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>NotesMy requires microphone access to record voice notes.</string>
+	<string>NotesMy requires microphone access to record voice notes and transcribe in-person and online meetings.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>NotesMy uses on-device speech recognition to transcribe voice notes into text.</string>
+	<string>NotesMy uses on-device speech recognition to transcribe meeting conversations and voice notes into text in real time.</string>
 </dict>
 </plist>

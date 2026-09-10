@@ -145,6 +145,14 @@ public struct AllNotesWindowView: View {
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
+                // Meeting Studio Launcher
+                Button(action: {
+                    MeetingStudioWindowManager.shared.show()
+                }) {
+                    Label(loc.language == .turkish ? "Toplantı Stüdyosu" : "Meeting Studio", systemImage: "person.2.wave.2")
+                }
+                .help(loc.language == .turkish ? "Toplantı Modu: Ekran Sesi, Mikrofon & EA Transkripsiyon" : "Meeting Studio: Screen Audio, Mic & AI Transcription")
+
                 // Screen Text OCR
                 Button(action: {
                     Task {
