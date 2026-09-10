@@ -118,6 +118,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
     @Published public var hasMicPermission: Bool = false
     @Published public var hasSpeechPermission: Bool = false
     @Published public var hasSystemAudioPermission: Bool = false
+    @Published public var recordingNotice: String? = nil
 
     // Real-time transcript entries
     @Published public var transcriptEntries: [MeetingTranscriptEntry] = []
@@ -151,15 +152,36 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         checkExistingPermissions()
     }
 
-    // MARK: - Permissions Check
+    // MARK: - Permissions Check & Settings Openers
     public func checkExistingPermissions() {
-        if #available(macOS 14.0, *) {
-            self.hasMicPermission = AVAudioApplication.shared.recordPermission == .granted
+        let captureStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        if captureStatus == .authorized {
+            self.hasMicPermission = true
+        } else if #available(macOS 14.0, *) {
+            self.hasMicPermission = (AVAudioApplication.shared.recordPermission == .granted)
         } else {
             self.hasMicPermission = true
         }
-        self.hasSpeechPermission = SFSpeechRecognizer.authorizationStatus() == .authorized
+        self.hasSpeechPermission = (SFSpeechRecognizer.authorizationStatus() == .authorized)
         self.hasSystemAudioPermission = CGPreflightScreenCaptureAccess()
+    }
+
+    public func openScreenCaptureSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    public func openMicrophoneSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    public func openSpeechRecognitionSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     public func requestAllPermissions() async -> Bool {
@@ -174,20 +196,21 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         self.hasSpeechPermission = speech
         self.hasSystemAudioPermission = screen
 
-        return mic && speech
+        return mic || screen
     }
 
     nonisolated private func requestMicPermission() async -> Bool {
+        let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        if authStatus == .authorized { return true }
+        if authStatus == .denied || authStatus == .restricted { return false }
+
+        let granted = await AVCaptureDevice.requestAccess(for: .audio)
+        if granted { return true }
+
         if #available(macOS 14.0, *) {
-            switch AVAudioApplication.shared.recordPermission {
-            case .granted: return true
-            case .denied: return false
-            case .undetermined: return await AVAudioApplication.requestRecordPermission()
-            @unknown default: return await AVAudioApplication.requestRecordPermission()
-            }
-        } else {
-            return true
+            return await AVAudioApplication.requestRecordPermission()
         }
+        return false
     }
 
     nonisolated private func requestSpeechPermission() async -> Bool {
@@ -206,9 +229,15 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
 
     public func requestScreenCapturePermission() -> Bool {
         if CGPreflightScreenCaptureAccess() {
+            self.hasSystemAudioPermission = true
             return true
         }
-        return CGRequestScreenCaptureAccess()
+        let requested = CGRequestScreenCaptureAccess()
+        if !requested {
+            openScreenCaptureSettings()
+        }
+        self.hasSystemAudioPermission = CGPreflightScreenCaptureAccess()
+        return self.hasSystemAudioPermission
     }
 
     // MARK: - Start Meeting Recording
@@ -230,12 +259,10 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         self.elapsedSeconds = 0
         self.isPaused = false
         self.meetingStartDate = Date()
+        self.recordingNotice = nil
 
-        let permissionsGranted = await requestAllPermissions()
-        guard permissionsGranted else {
-            print("MeetingRecordingService: Mic or Speech permissions missing")
-            return false
-        }
+        // Attempt permission check/requests without blocking if any audio capture is possible
+        _ = await requestAllPermissions()
 
         let locale = Locale(identifier: language.speechLocale)
         setupSpeechRecognizers(locale: locale)
@@ -246,21 +273,28 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         self.currentRecordedURL = outputURL
 
         // Start Microphone if mode needs it
-        var micSuccess = true
+        var micSuccess = false
         if mode != .systemOnly {
             micSuccess = startMicrophoneCapture(outputURL: outputURL)
         }
 
         // Start System Audio if mode is online or systemOnly
-        var systemSuccess = true
+        var systemSuccess = false
         if mode == .online || mode == .systemOnly {
             systemSuccess = await startSystemAudioCapture()
         }
 
         guard micSuccess || systemSuccess else {
-            print("MeetingRecordingService: Failed to start both audio sources")
+            print("MeetingRecordingService: Failed to start both audio sources (mic: \(micSuccess), sys: \(systemSuccess))")
             cleanupAll()
             return false
+        }
+
+        let isTR = LocalizationService.shared.language == .turkish
+        if mode == .online && !systemSuccess && micSuccess {
+            self.recordingNotice = isTR
+                ? "Toplantı mikrofonunuz üzerinden kaydediliyor. Zoom/Teams'deki karşı tarafın sesini doğrudan yakalamak için Sistem Ayarları'ndan Ekran Kaydı izni verin."
+                : "Recording via microphone. To capture remote voices directly from Zoom/Teams, grant Screen Recording in System Settings."
         }
 
         // Start Elapsed Timer
@@ -289,11 +323,15 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         let engine = AVAudioEngine()
         self.audioEngine = engine
         let inputNode = engine.inputNode
-        let format = inputNode.inputFormat(forBus: 0)
+        var format = inputNode.inputFormat(forBus: 0)
 
-        guard format.sampleRate > 0, format.channelCount > 0 else {
-            print("Invalid mic format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
-            return false
+        if format.sampleRate <= 0 || format.channelCount <= 0 {
+            if let fallback = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) {
+                format = fallback
+            } else {
+                print("Invalid mic format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
+                return false
+            }
         }
 
         do {
@@ -313,7 +351,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         request.addsPunctuation = true
         self.micRecognitionRequest = request
 
-        if let recognizer = micSpeechRecognizer, recognizer.isAvailable {
+        if hasSpeechPermission, let recognizer = micSpeechRecognizer, recognizer.isAvailable {
             self.micRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
                 Task { @MainActor [weak self] in
                     guard let self = self, self.isRecording, !self.isPaused else { return }
@@ -388,7 +426,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
             sysRequest.addsPunctuation = true
             self.systemRecognitionRequest = sysRequest
 
-            if let sysRecognizer = systemSpeechRecognizer, sysRecognizer.isAvailable {
+            if hasSpeechPermission, let sysRecognizer = systemSpeechRecognizer, sysRecognizer.isAvailable {
                 self.systemRecognitionTask = sysRecognizer.recognitionTask(with: sysRequest) { [weak self] result, error in
                     Task { @MainActor [weak self] in
                         guard let self = self, self.isRecording, !self.isPaused else { return }

@@ -32,5 +32,7 @@
 	<string>NotesMy requires microphone access to record voice notes and transcribe in-person and online meetings.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>NotesMy uses on-device speech recognition to transcribe meeting conversations and voice notes into text in real time.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>NotesMy requires screen audio capture access to record and transcribe audio from online meetings such as Zoom, Microsoft Teams, and Google Meet.</string>
 </dict>
 </plist>

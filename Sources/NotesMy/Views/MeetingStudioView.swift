@@ -69,6 +69,9 @@ public struct MeetingStudioView: View {
             self.selectedLanguage = loc.language
             meetingService.checkExistingPermissions()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            meetingService.checkExistingPermissions()
+        }
     }
 
     // MARK: - 1. Header Bar
@@ -188,6 +191,44 @@ public struct MeetingStudioView: View {
                     }
                 }
 
+                // Microphone Permission Warning if needed
+                if selectedMode != .systemOnly && !meetingService.hasMicPermission {
+                    HStack(spacing: 12) {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.red)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(isTR ? "Mikrofon İzni Gerekli" : "Microphone Permission Required")
+                                .font(.system(size: 13, weight: .bold))
+                            Text(isTR
+                                 ? "Konuşmalarınızı kaydetmek ve transkript çıkarmak için Sistem Ayarları'ndan mikrofon izni vermeniz gerekir."
+                                 : "Microphone access is required to record your voice and generate transcripts.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 8) {
+                            Button(isTR ? "Ayarları Aç" : "Open Settings") {
+                                meetingService.openMicrophoneSettings()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+
+                            Button(isTR ? "Denetle" : "Recheck") {
+                                meetingService.checkExistingPermissions()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.red.opacity(0.08))
+                    .cornerRadius(8)
+                }
+
                 // Screen Capture System Audio Warning if Online Mode
                 if (selectedMode == .online || selectedMode == .systemOnly) && !meetingService.hasSystemAudioPermission {
                     HStack(spacing: 12) {
@@ -196,22 +237,31 @@ public struct MeetingStudioView: View {
                             .foregroundColor(.orange)
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(isTR ? "Ekran / Sistem Sesi İzni Gerekiyor" : "Screen & System Audio Permission Required")
+                            Text(isTR ? "Ekran / Sistem Sesi İzni (Zoom & Teams)" : "Screen & System Audio Permission Required")
                                 .font(.system(size: 13, weight: .bold))
                             Text(isTR
-                                 ? "Zoom, Teams ve Google Meet'teki karşı tarafın sesini doğrudan yakalayabilmek için macOS Ekran Kaydı izni verin. İzin verilmezse toplantı yalnızca mikrofonunuz üzerinden kaydedilir."
-                                 : "To capture voices from Zoom, Teams and Google Meet participants, please grant macOS Screen Recording permission. Otherwise, recording falls back to microphone.")
+                                 ? "Zoom, Teams ve Google Meet'teki karşı tarafın sesini doğrudan yakalayabilmek için macOS Ekran Kaydı izni verin. İzin verdikten sonra uygulamanın yeniden başlatılması gerekebilir."
+                                 : "To capture voices from Zoom, Teams and Google Meet, please grant macOS Screen Recording permission in System Settings.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
 
-                        Button(isTR ? "İzin Ver" : "Grant Access") {
-                            _ = meetingService.requestScreenCapturePermission()
+                        HStack(spacing: 8) {
+                            Button(isTR ? "Ayarları Aç (İzin Ver)" : "Open Settings") {
+                                _ = meetingService.requestScreenCapturePermission()
+                                meetingService.openScreenCaptureSettings()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+
+                            Button(isTR ? "Denetle" : "Recheck") {
+                                meetingService.checkExistingPermissions()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
                     }
                     .padding(12)
                     .background(Color.orange.opacity(0.1))
@@ -438,6 +488,29 @@ public struct MeetingStudioView: View {
             .background(Color(NSColor.controlBackgroundColor))
 
             Divider()
+
+            if let notice = meetingService.recordingNotice {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 13))
+                    Text(notice)
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button(action: { meetingService.recordingNotice = nil }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 7)
+                .background(Color.blue.opacity(0.08))
+
+                Divider()
+            }
 
             // Split View: Left: Live Transcript Timeline, Right: Live Scratchpad
             HSplitView {

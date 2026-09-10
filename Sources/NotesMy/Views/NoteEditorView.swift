@@ -36,6 +36,50 @@ public struct NoteEditorView: View {
     @State private var isMarkdownPreview: Bool = false
     @State private var showMarkdownFormatBar: Bool = true
     @State private var showTablePopover: Bool = false
+    @State private var viewWidth: CGFloat = 380
+
+    // Dynamic responsive sizing properties based on window width
+    private var headerButtonSize: CGFloat {
+        if viewWidth >= 490 { return 27 }
+        if viewWidth >= 380 { return 24 }
+        return 21
+    }
+
+    private var headerIconSize: CGFloat {
+        if viewWidth >= 490 { return 13.5 }
+        if viewWidth >= 380 { return 12 }
+        return 10.5
+    }
+
+    private var headerSpacing: CGFloat {
+        if viewWidth >= 490 { return 10 }
+        if viewWidth >= 380 { return 6 }
+        return 4
+    }
+
+    private var meetingBtnWidth: CGFloat {
+        if viewWidth >= 490 { return 32 }
+        if viewWidth >= 380 { return 27 }
+        return 23
+    }
+
+    private var footerButtonSize: CGFloat {
+        if viewWidth >= 490 { return 24 }
+        if viewWidth >= 380 { return 22 }
+        return 20
+    }
+
+    private var footerIconSize: CGFloat {
+        if viewWidth >= 490 { return 13 }
+        if viewWidth >= 380 { return 11.5 }
+        return 10.5
+    }
+
+    private var footerSpacing: CGFloat {
+        if viewWidth >= 490 { return 8 }
+        if viewWidth >= 380 { return 5 }
+        return 3
+    }
 
     public init(noteId: UUID, store: NoteStore = .shared, onClose: @escaping () -> Void) {
         self.noteId = noteId
@@ -188,18 +232,31 @@ public struct NoteEditorView: View {
         .onDrop(of: [.fileURL, .image], isTargeted: $isDragTargetActive) { providers in
             handleDrop(providers: providers)
         }
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: NoteViewWidthPreferenceKey.self, value: proxy.size.width)
+            }
+        )
+        .onPreferenceChange(NoteViewWidthPreferenceKey.self) { newWidth in
+            if newWidth > 0 && abs(self.viewWidth - newWidth) > 1 {
+                self.viewWidth = newWidth
+            }
+        }
     }
 
     // MARK: - Header Bar
 
+    // MARK: - Header Bar
+
     private var headerBar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: headerSpacing) {
             // Fold / Accordion Toggle
             Button(action: { isFolded.toggle() }) {
                 Image(systemName: isFolded ? "chevron.right" : "chevron.down")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: headerIconSize, weight: .bold))
                     .foregroundColor(localColor.secondaryTextColor)
-                    .frame(width: 26, height: 26)
+                    .frame(width: headerButtonSize, height: headerButtonSize)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -209,7 +266,7 @@ public struct NoteEditorView: View {
             Button(action: { showColorPickerPopover.toggle() }) {
                 Circle()
                     .fill(localColor.dotColor)
-                    .frame(width: 19, height: 19)
+                    .frame(width: max(14, headerButtonSize - 7), height: max(14, headerButtonSize - 7))
                     .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 1.5))
             }
             .buttonStyle(.plain)
@@ -221,8 +278,9 @@ public struct NoteEditorView: View {
             // Title Field
             TextField("", text: $localTitle, prompt: Text("Note Title...").foregroundColor(localColor.secondaryTextColor))
                 .textFieldStyle(.plain)
-                .font(.system(size: 14, weight: .bold, design: isCodeMode ? .monospaced : .rounded))
+                .font(.system(size: viewWidth >= 490 ? 14 : 12.5, weight: .bold, design: isCodeMode ? .monospaced : .rounded))
                 .foregroundColor(localColor.textColor)
+                .frame(minWidth: 35)
 
             Spacer()
 
@@ -241,75 +299,116 @@ public struct NoteEditorView: View {
                     Label(loc.language == .turkish ? "+ Yeni Kategori..." : "+ New Category...", systemImage: "folder.badge.plus")
                 }
             } label: {
-                Text(loc.localizedCategory(localCategory))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundColor(localColor.secondaryTextColor)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4.5)
-                    .background(Color.black.opacity(0.06))
-                    .cornerRadius(6)
+                if viewWidth < 370 {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: max(9, headerIconSize - 1), weight: .semibold))
+                        .foregroundColor(localColor.secondaryTextColor)
+                        .frame(width: headerButtonSize, height: headerButtonSize)
+                        .background(Color.black.opacity(0.06))
+                        .cornerRadius(5)
+                } else {
+                    Text(loc.localizedCategory(localCategory))
+                        .font(.system(size: viewWidth >= 490 ? 11 : 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(localColor.secondaryTextColor)
+                        .padding(.horizontal, viewWidth >= 490 ? 8 : 6)
+                        .padding(.vertical, viewWidth >= 490 ? 4 : 3)
+                        .background(Color.black.opacity(0.06))
+                        .cornerRadius(5)
+                }
             }
             .menuStyle(.borderlessButton)
 
-            // Favorite Toggle
-            Button(action: toggleFavorite) {
-                Image(systemName: isFavorite ? "star.fill" : "star")
-                    .font(.system(size: 14))
-                    .foregroundColor(isFavorite ? .yellow : localColor.secondaryTextColor)
-                    .frame(width: 28, height: 28)
-                    .background(Color.black.opacity(0.04))
-                    .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-            .help(isFavorite ? "Remove from Favorites" : "Add to Favorites")
+            if viewWidth >= 410 {
+                // Favorite Toggle
+                Button(action: toggleFavorite) {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: headerIconSize))
+                        .foregroundColor(isFavorite ? .yellow : localColor.secondaryTextColor)
+                        .frame(width: headerButtonSize, height: headerButtonSize)
+                        .background(Color.black.opacity(0.04))
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help(isFavorite ? "Remove from Favorites" : "Add to Favorites")
 
-            // Voice Note Record Button
-            Button(action: toggleVoiceRecording) {
-                Image(systemName: isRecordingVoice ? "stop.circle.fill" : "mic.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(isRecordingVoice ? .white : localColor.secondaryTextColor)
-                    .frame(width: 28, height: 28)
-                    .background(isRecordingVoice ? Color.red : Color.black.opacity(0.04))
-                    .cornerRadius(6)
+                // Voice Note Record Button
+                Button(action: toggleVoiceRecording) {
+                    Image(systemName: isRecordingVoice ? "stop.circle.fill" : "mic.fill")
+                        .font(.system(size: headerIconSize))
+                        .foregroundColor(isRecordingVoice ? .white : localColor.secondaryTextColor)
+                        .frame(width: headerButtonSize, height: headerButtonSize)
+                        .background(isRecordingVoice ? Color.red : Color.black.opacity(0.04))
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help(isRecordingVoice ? loc.text(.speechStop) : loc.text(.speechRecord))
             }
-            .buttonStyle(.plain)
-            .help(isRecordingVoice ? loc.text(.speechStop) : loc.text(.speechRecord))
 
-            // Meeting Studio Button (Prominent & Accentuated)
+            // Meeting Studio Button (Always accessible & responsive size)
             Button(action: { MeetingStudioWindowManager.shared.show() }) {
                 Image(systemName: "person.2.wave.2.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: headerIconSize, weight: .semibold))
                     .foregroundColor(.blue)
-                    .frame(width: 32, height: 28)
+                    .frame(width: meetingBtnWidth, height: headerButtonSize)
                     .background(Color.blue.opacity(0.14))
-                    .cornerRadius(7)
-            }
-            .buttonStyle(.plain)
-            .help(loc.language == .turkish ? "Toplantı Stüdyosu: Canlı Transkripsiyon & EA Özeti (Zoom / Teams / Yüz yüze)" : "Meeting Studio: Live Transcribe & AI Recap (Zoom / Teams / In-Person)")
-
-            // Templates Button
-            Button(action: { showTemplatePicker.toggle() }) {
-                Image(systemName: "square.dashed.inset.filled")
-                    .font(.system(size: 14))
-                    .foregroundColor(localColor.secondaryTextColor)
-                    .frame(width: 28, height: 28)
-                    .background(Color.black.opacity(0.04))
                     .cornerRadius(6)
             }
             .buttonStyle(.plain)
-            .help(loc.language == .turkish ? "Not Şablonu Uygula" : "Apply Note Template")
+            .help(loc.language == .turkish ? "Toplantı Stüdyosu: Canlı Transkripsiyon & EA Özeti" : "Meeting Studio: Live Transcribe & AI Recap")
 
-            // Version History Button
-            Button(action: { showVersionHistory.toggle() }) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 14))
-                    .foregroundColor(localColor.secondaryTextColor)
-                    .frame(width: 28, height: 28)
-                    .background(Color.black.opacity(0.04))
-                    .cornerRadius(6)
+            if viewWidth >= 460 {
+                // Templates Button
+                Button(action: { showTemplatePicker.toggle() }) {
+                    Image(systemName: "square.dashed.inset.filled")
+                        .font(.system(size: headerIconSize))
+                        .foregroundColor(localColor.secondaryTextColor)
+                        .frame(width: headerButtonSize, height: headerButtonSize)
+                        .background(Color.black.opacity(0.04))
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Not Şablonu Uygula" : "Apply Note Template")
+
+                // Version History Button
+                Button(action: { showVersionHistory.toggle() }) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: headerIconSize))
+                        .foregroundColor(localColor.secondaryTextColor)
+                        .frame(width: headerButtonSize, height: headerButtonSize)
+                        .background(Color.black.opacity(0.04))
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help(loc.language == .turkish ? "Versiyon Geçmişi" : "Version History")
+            } else {
+                // Compact toolbar menu for folded secondary tools
+                Menu {
+                    if viewWidth < 410 {
+                        Button(action: toggleFavorite) {
+                            Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "star.fill" : "star")
+                        }
+                        Button(action: toggleVoiceRecording) {
+                            Label(isRecordingVoice ? loc.text(.speechStop) : loc.text(.speechRecord), systemImage: isRecordingVoice ? "stop.circle.fill" : "mic.fill")
+                        }
+                        Divider()
+                    }
+                    Button(action: { showTemplatePicker.toggle() }) {
+                        Label(loc.language == .turkish ? "Not Şablonu Uygula" : "Apply Note Template", systemImage: "square.dashed.inset.filled")
+                    }
+                    Button(action: { showVersionHistory.toggle() }) {
+                        Label(loc.language == .turkish ? "Versiyon Geçmişi" : "Version History", systemImage: "clock.arrow.circlepath")
+                    }
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: headerIconSize))
+                        .foregroundColor(localColor.secondaryTextColor)
+                        .frame(width: headerButtonSize, height: headerButtonSize)
+                        .background(Color.black.opacity(0.04))
+                        .cornerRadius(5)
+                }
+                .menuStyle(.borderlessButton)
+                .help(loc.language == .turkish ? "Ek Araçlar (Yıldız, Ses Kaydı, Şablonlar, Geçmiş)" : "Tools (Star, Voice, Templates, History)")
             }
-            .buttonStyle(.plain)
-            .help(loc.language == .turkish ? "Versiyon Geçmişi" : "Version History")
 
             // Apple Intelligence Sparkles Menu
             aiToolsMenu
@@ -317,11 +416,11 @@ public struct NoteEditorView: View {
             // Pin / Floating toggle
             Button(action: togglePin) {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
-                    .font(.system(size: 14))
+                    .font(.system(size: headerIconSize))
                     .foregroundColor(isPinned ? Color.accentColor : localColor.secondaryTextColor)
-                    .frame(width: 28, height: 28)
+                    .frame(width: headerButtonSize, height: headerButtonSize)
                     .background(isPinned ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
-                    .cornerRadius(6)
+                    .cornerRadius(5)
             }
             .buttonStyle(.plain)
             .help(isPinned ? "Unpin from desktop" : "Pin to desktop")
@@ -329,16 +428,16 @@ public struct NoteEditorView: View {
             // Close button
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 17))
+                    .font(.system(size: max(13, headerIconSize + 2.5)))
                     .foregroundColor(localColor.secondaryTextColor.opacity(0.8))
-                    .frame(width: 28, height: 28)
+                    .frame(width: headerButtonSize, height: headerButtonSize)
             }
             .buttonStyle(.plain)
             .help("Close (Esc)")
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.horizontal, viewWidth >= 490 ? 14 : 10)
+        .padding(.top, viewWidth >= 490 ? 12 : 9)
+        .padding(.bottom, viewWidth >= 490 ? 8 : 6)
     }
 
     // MARK: - Apple Intelligence Menu
@@ -893,43 +992,47 @@ public struct NoteEditorView: View {
     // MARK: - Markdown Format Bar
 
     private var markdownFormatBar: some View {
-        HStack(spacing: 8) {
+        let btnSize: CGFloat = viewWidth >= 490 ? 24 : 21
+        let iconSize: CGFloat = viewWidth >= 490 ? 11.5 : 10
+        let barSpacing: CGFloat = viewWidth >= 490 ? 6 : 4
+
+        return HStack(spacing: viewWidth >= 490 ? 8 : 5) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    formatButton(symbol: "bold", tooltip: "Kalın / Bold (**metin**) [⌘B]", action: {
+                HStack(spacing: barSpacing) {
+                    formatButton(symbol: "bold", tooltip: "Kalın / Bold (**metin**) [⌘B]", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "**", suffix: "**", placeholder: "kalın metin")
                     })
 
-                    formatButton(symbol: "italic", tooltip: "İtalik / Italic (*metin*) [⌘I]", action: {
+                    formatButton(symbol: "italic", tooltip: "İtalik / Italic (*metin*) [⌘I]", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "*", suffix: "*", placeholder: "italik metin")
                     })
 
-                    formatButton(symbol: "strikethrough", tooltip: "Üstü Çizili (~~metin~~)", action: {
+                    formatButton(symbol: "strikethrough", tooltip: "Üstü Çizili (~~metin~~)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "~~", suffix: "~~", placeholder: "çizili metin")
                     })
 
-                    formatButton(symbol: "highlighter", tooltip: loc.language == .turkish ? "Vurgula / Highlight (==metin==)" : "Highlight (==text==)", action: {
+                    formatButton(symbol: "highlighter", tooltip: loc.language == .turkish ? "Vurgula / Highlight (==metin==)" : "Highlight (==text==)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "==", suffix: "==", placeholder: "vurgulu metin")
                     })
 
-                    formatButton(symbol: "chevron.left.forwardslash.chevron.right", tooltip: "Satır İçi Kod (`kod`)", action: {
+                    formatButton(symbol: "chevron.left.forwardslash.chevron.right", tooltip: "Satır İçi Kod (`kod`)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "`", suffix: "`", placeholder: "kod")
                     })
 
-                    formatButton(symbol: "curlybraces", tooltip: loc.language == .turkish ? "Kod Bloğu (```kod```)" : "Code Block (```code```)", action: {
+                    formatButton(symbol: "curlybraces", tooltip: loc.language == .turkish ? "Kod Bloğu (```kod```)" : "Code Block (```code```)", size: btnSize, iconSize: iconSize, action: {
                         insertRawMarkdown("```swift\n// Kod bloğu\n```")
                     })
 
-                    formatButton(symbol: "number", tooltip: "Başlık / Heading (## Başlık)", action: {
+                    formatButton(symbol: "number", tooltip: "Başlık / Heading (## Başlık)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "\n## ", suffix: "\n", placeholder: "Başlık")
                     })
 
                     // Table Popover Trigger
                     Button(action: { showTablePopover.toggle() }) {
                         Image(systemName: "tablecells")
-                            .font(.system(size: 11.5, weight: .semibold))
+                            .font(.system(size: iconSize, weight: .semibold))
                             .foregroundColor(showTablePopover ? Color.accentColor : localColor.secondaryTextColor)
-                            .frame(width: 24, height: 24)
+                            .frame(width: btnSize, height: btnSize)
                             .background(showTablePopover ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
                             .cornerRadius(5)
                     }
@@ -970,9 +1073,9 @@ public struct NoteEditorView: View {
                         }
                     } label: {
                         Image(systemName: "quote.bubble")
-                            .font(.system(size: 11.5, weight: .medium))
+                            .font(.system(size: iconSize, weight: .medium))
                             .foregroundColor(localColor.secondaryTextColor)
-                            .frame(width: 24, height: 24)
+                            .frame(width: btnSize, height: btnSize)
                             .background(Color.black.opacity(0.04))
                             .cornerRadius(5)
                     }
@@ -980,33 +1083,33 @@ public struct NoteEditorView: View {
                     .help(loc.language == .turkish ? "Bilgi / Uyarı Kutusu (Callout)" : "Callout Box (Note / Tip / Warning)")
 
                     // Collapsible Toggle Block (<details>)
-                    formatButton(symbol: "chevron.right.circle", tooltip: loc.language == .turkish ? "Açılır/Kapanır Detay Bloğu (<details>)" : "Toggle List (<details>)", action: {
+                    formatButton(symbol: "chevron.right.circle", tooltip: loc.language == .turkish ? "Açılır/Kapanır Detay Bloğu (<details>)" : "Toggle List (<details>)", size: btnSize, iconSize: iconSize, action: {
                         let title = loc.language == .turkish ? "Detay Başlığı" : "Toggle Title"
                         let desc = loc.language == .turkish ? "Gizli içerik buraya gelecek..." : "Hidden details go here..."
                         insertRawMarkdown("<details>\n<summary>\(title)</summary>\n\(desc)\n</details>")
                     })
 
-                    formatButton(symbol: "quote.opening", tooltip: "Alıntı / Quote (> alıntı)", action: {
+                    formatButton(symbol: "quote.opening", tooltip: "Alıntı / Quote (> alıntı)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "\n> ", suffix: "\n", placeholder: "alıntı")
                     })
 
-                    formatButton(symbol: "list.bullet", tooltip: "Madde İmleri (- liste)", action: {
+                    formatButton(symbol: "list.bullet", tooltip: "Madde İmleri (- liste)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "\n- ", suffix: "", placeholder: "madde")
                     })
 
-                    formatButton(symbol: "list.number", tooltip: loc.language == .turkish ? "Numaralı Liste (1. liste)" : "Numbered List (1. item)", action: {
+                    formatButton(symbol: "list.number", tooltip: loc.language == .turkish ? "Numaralı Liste (1. liste)" : "Numbered List (1. item)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "\n1. ", suffix: "", placeholder: "madde")
                     })
 
-                    formatButton(symbol: "checklist", tooltip: "Görev Listesi (- [ ] görev)", action: {
+                    formatButton(symbol: "checklist", tooltip: "Görev Listesi (- [ ] görev)", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "\n- [ ] ", suffix: "", placeholder: "yapılacak iş")
                     })
 
-                    formatButton(symbol: "minus", tooltip: loc.language == .turkish ? "Yatay Ayırıcı Çizgi (---)" : "Horizontal Rule (---)", action: {
+                    formatButton(symbol: "minus", tooltip: loc.language == .turkish ? "Yatay Ayırıcı Çizgi (---)" : "Horizontal Divider (---)", size: btnSize, iconSize: iconSize, action: {
                         insertRawMarkdown("---")
                     })
 
-                    formatButton(symbol: "link", tooltip: "Bağlantı ([başlık](url))", action: {
+                    formatButton(symbol: "link", tooltip: "Bağlantı ([başlık](url))", size: btnSize, iconSize: iconSize, action: {
                         insertMarkdown(prefix: "[", suffix: "](https://...)", placeholder: "bağlantı metni")
                     })
                 }
@@ -1019,14 +1122,16 @@ public struct NoteEditorView: View {
                     isMarkdownPreview.toggle()
                 }
             }) {
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Image(systemName: isMarkdownPreview ? "pencil" : "eye")
-                        .font(.system(size: 10, weight: .bold))
-                    Text(isMarkdownPreview ? (loc.language == .turkish ? "Düzenle" : "Edit") : (loc.language == .turkish ? "Önizle" : "Preview"))
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: max(8, iconSize - 1.5), weight: .bold))
+                    if viewWidth >= 360 {
+                        Text(isMarkdownPreview ? (loc.language == .turkish ? "Düzenle" : "Edit") : (loc.language == .turkish ? "Önizle" : "Preview"))
+                            .font(.system(size: max(8, iconSize - 2), weight: .semibold))
+                    }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3.5)
+                .padding(.horizontal, viewWidth >= 360 ? 7 : 5)
+                .padding(.vertical, 3)
                 .background(isMarkdownPreview ? Color.accentColor : Color.black.opacity(0.08))
                 .foregroundColor(isMarkdownPreview ? .white : localColor.secondaryTextColor)
                 .cornerRadius(5)
@@ -1034,20 +1139,20 @@ public struct NoteEditorView: View {
             .buttonStyle(.plain)
             .help("Markdown Önizleme (⌘P)")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, viewWidth >= 490 ? 10 : 8)
+        .padding(.vertical, viewWidth >= 490 ? 4 : 3)
         .background(Color.black.opacity(0.04))
-        .cornerRadius(7)
+        .cornerRadius(6)
         .padding(.horizontal, 10)
         .padding(.bottom, 3)
     }
 
-    private func formatButton(symbol: String, tooltip: String, action: @escaping () -> Void) -> some View {
+    private func formatButton(symbol: String, tooltip: String, size: CGFloat = 24, iconSize: CGFloat = 11.5, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11.5, weight: .medium))
+                .font(.system(size: iconSize, weight: .medium))
                 .foregroundColor(localColor.secondaryTextColor)
-                .frame(width: 24, height: 24)
+                .frame(width: size, height: size)
                 .background(Color.black.opacity(0.04))
                 .cornerRadius(5)
         }
@@ -1095,23 +1200,29 @@ public struct NoteEditorView: View {
     // MARK: - Footer Bar
 
     private var footerBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: footerSpacing) {
             let wordCount = localBody.split { $0.isWhitespace || $0.isNewline }.count
             let charCount = localBody.count
 
-            Text("\(wordCount)w · \(charCount)c")
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundColor(localColor.secondaryTextColor.opacity(0.85))
+            if viewWidth >= 400 {
+                Text("\(wordCount)w · \(charCount)c")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(localColor.secondaryTextColor.opacity(0.85))
+            } else if viewWidth >= 330 {
+                Text("\(wordCount)w")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(localColor.secondaryTextColor.opacity(0.85))
+            }
 
             Spacer()
 
             // Flip through notes (< and >)
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 Button(action: { store.cycleNote(forward: false) }) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: max(9, footerIconSize - 1.5), weight: .bold))
                         .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 22, height: 22)
+                        .frame(width: footerButtonSize, height: footerButtonSize)
                         .background(Color.black.opacity(0.04))
                         .cornerRadius(4)
                 }
@@ -1120,9 +1231,9 @@ public struct NoteEditorView: View {
 
                 Button(action: { store.cycleNote(forward: true) }) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: max(9, footerIconSize - 1.5), weight: .bold))
                         .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 22, height: 22)
+                        .frame(width: footerButtonSize, height: footerButtonSize)
                         .background(Color.black.opacity(0.04))
                         .cornerRadius(4)
                 }
@@ -1133,53 +1244,55 @@ public struct NoteEditorView: View {
             Spacer()
 
             // Quick Actions
-            HStack(spacing: 10) {
-                // Screenshot
-                Button(action: captureScreenshot) {
-                    Image(systemName: "camera")
-                        .font(.system(size: 13))
-                        .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
-                        .background(Color.black.opacity(0.04))
-                        .cornerRadius(5)
-                }
-                .buttonStyle(.plain)
-                .help(loc.text(.captureScreen))
-
-                // Paste Image from Clipboard
-                Button(action: {
-                    if !pasteImageFromClipboard() {
-                        aiStatusMessage = loc.language == .turkish ? "Panoda görsel bulunamadı" : "No image found on clipboard"
+            HStack(spacing: footerSpacing) {
+                if viewWidth >= 430 {
+                    // Screenshot
+                    Button(action: captureScreenshot) {
+                        Image(systemName: "camera")
+                            .font(.system(size: footerIconSize))
+                            .foregroundColor(localColor.secondaryTextColor)
+                            .frame(width: footerButtonSize, height: footerButtonSize)
+                            .background(Color.black.opacity(0.04))
+                            .cornerRadius(5)
                     }
-                }) {
-                    Image(systemName: "doc.on.clipboard")
-                        .font(.system(size: 13))
-                        .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
-                        .background(Color.black.opacity(0.04))
-                        .cornerRadius(5)
-                }
-                .buttonStyle(.plain)
-                .help(loc.language == .turkish ? "Panodaki Görseli Yapıştır" : "Paste Image from Clipboard")
+                    .buttonStyle(.plain)
+                    .help(loc.text(.captureScreen))
 
-                // Screen OCR
-                Button(action: captureScreenOCR) {
-                    Image(systemName: "text.viewfinder")
-                        .font(.system(size: 13))
-                        .foregroundColor(isPerformingOCR ? Color.accentColor : localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
-                        .background(isPerformingOCR ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
-                        .cornerRadius(5)
+                    // Paste Image from Clipboard
+                    Button(action: {
+                        if !pasteImageFromClipboard() {
+                            aiStatusMessage = loc.language == .turkish ? "Panoda görsel bulunamadı" : "No image found on clipboard"
+                        }
+                    }) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: footerIconSize))
+                            .foregroundColor(localColor.secondaryTextColor)
+                            .frame(width: footerButtonSize, height: footerButtonSize)
+                            .background(Color.black.opacity(0.04))
+                            .cornerRadius(5)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.language == .turkish ? "Panodaki Görseli Yapıştır" : "Paste Image from Clipboard")
+
+                    // Screen OCR
+                    Button(action: captureScreenOCR) {
+                        Image(systemName: "text.viewfinder")
+                            .font(.system(size: footerIconSize))
+                            .foregroundColor(isPerformingOCR ? Color.accentColor : localColor.secondaryTextColor)
+                            .frame(width: footerButtonSize, height: footerButtonSize)
+                            .background(isPerformingOCR ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
+                            .cornerRadius(5)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen Text (OCR)")
                 }
-                .buttonStyle(.plain)
-                .help(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen Text (OCR)")
 
                 // Checklist
                 Button(action: insertChecklistItem) {
                     Image(systemName: "checkmark.square")
-                        .font(.system(size: 13))
+                        .font(.system(size: footerIconSize))
                         .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
+                        .frame(width: footerButtonSize, height: footerButtonSize)
                         .background(Color.black.opacity(0.04))
                         .cornerRadius(5)
                 }
@@ -1193,44 +1306,75 @@ public struct NoteEditorView: View {
                     }
                 }) {
                     Image(systemName: isMarkdownPreview ? "pencil.circle.fill" : "eye")
-                        .font(.system(size: 13))
+                        .font(.system(size: footerIconSize))
                         .foregroundColor(isMarkdownPreview ? Color.accentColor : localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
+                        .frame(width: footerButtonSize, height: footerButtonSize)
                         .background(isMarkdownPreview ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.04))
                         .cornerRadius(5)
                 }
                 .buttonStyle(.plain)
                 .help(isMarkdownPreview ? (loc.language == .turkish ? "Düzenleme Modu (⌘P)" : "Edit Mode (⌘P)") : (loc.language == .turkish ? "Markdown Önizleme (⌘P)" : "Markdown Preview (⌘P)"))
 
-                // Reminder
-                Button(action: { showReminderPopover.toggle() }) {
-                    Image(systemName: currentNote?.reminderDate != nil ? "bell.fill" : "bell")
-                        .font(.system(size: 13))
-                        .foregroundColor(currentNote?.reminderDate != nil ? Color.orange : localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
-                        .background(currentNote?.reminderDate != nil ? Color.orange.opacity(0.15) : Color.black.opacity(0.04))
-                        .cornerRadius(5)
-                }
-                .buttonStyle(.plain)
-                .help("Set Reminder")
-                .popover(isPresented: $showReminderPopover) {
-                    reminderPopoverContent
-                }
+                if viewWidth >= 370 {
+                    // Reminder
+                    Button(action: { showReminderPopover.toggle() }) {
+                        Image(systemName: currentNote?.reminderDate != nil ? "bell.fill" : "bell")
+                            .font(.system(size: footerIconSize))
+                            .foregroundColor(currentNote?.reminderDate != nil ? Color.orange : localColor.secondaryTextColor)
+                            .frame(width: footerButtonSize, height: footerButtonSize)
+                            .background(currentNote?.reminderDate != nil ? Color.orange.opacity(0.15) : Color.black.opacity(0.04))
+                            .cornerRadius(5)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Set Reminder")
+                    .popover(isPresented: $showReminderPopover) {
+                        reminderPopoverContent
+                    }
 
-                // Apple Pencil
-                Button(action: { showPencilDrawing = true }) {
-                    Image(systemName: "pencil.tip.crop.circle")
-                        .font(.system(size: 13))
-                        .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
-                        .background(Color.black.opacity(0.04))
-                        .cornerRadius(5)
+                    if viewWidth >= 430 {
+                        // Apple Pencil
+                        Button(action: { showPencilDrawing = true }) {
+                            Image(systemName: "pencil.tip.crop.circle")
+                                .font(.system(size: footerIconSize))
+                                .foregroundColor(localColor.secondaryTextColor)
+                                .frame(width: footerButtonSize, height: footerButtonSize)
+                                .background(Color.black.opacity(0.04))
+                                .cornerRadius(5)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Freehand Sketch & Canvas")
+                    }
                 }
-                .buttonStyle(.plain)
-                .help("Freehand Sketch & Canvas")
 
                 // More Menu (All extra features cleanly accessible)
                 Menu {
+                    if viewWidth < 430 {
+                        Section {
+                            Button(action: captureScreenshot) {
+                                Label(loc.text(.captureScreen), systemImage: "camera")
+                            }
+                            Button(action: {
+                                if !pasteImageFromClipboard() {
+                                    aiStatusMessage = loc.language == .turkish ? "Panoda görsel bulunamadı" : "No image found on clipboard"
+                                }
+                            }) {
+                                Label(loc.language == .turkish ? "Panodaki Görseli Yapıştır" : "Paste Image from Clipboard", systemImage: "doc.on.clipboard")
+                            }
+                            Button(action: captureScreenOCR) {
+                                Label(loc.language == .turkish ? "Ekrandan Metin Yakala (OCR)" : "Capture Screen Text (OCR)", systemImage: "text.viewfinder")
+                            }
+                            Button(action: { showPencilDrawing = true }) {
+                                Label("Freehand Sketch & Canvas", systemImage: "pencil.tip.crop.circle")
+                            }
+                            if viewWidth < 370 {
+                                Button(action: { showReminderPopover = true }) {
+                                    Label("Set Reminder", systemImage: "bell")
+                                }
+                            }
+                        }
+                        Divider()
+                    }
+
                     Button(action: { AllNotesWindowManager.shared.show() }) {
                         Label(loc.language == .turkish ? "Ana Pencereyi Aç (Tüm Notlar)" : "Open Main Dashboard (All Notes)", systemImage: "macwindow.on.rectangle")
                     }
@@ -1325,9 +1469,9 @@ public struct NoteEditorView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 13))
+                        .font(.system(size: footerIconSize))
                         .foregroundColor(localColor.secondaryTextColor)
-                        .frame(width: 24, height: 24)
+                        .frame(width: footerButtonSize, height: footerButtonSize)
                         .background(Color.black.opacity(0.04))
                         .cornerRadius(5)
                 }
@@ -1335,8 +1479,8 @@ public struct NoteEditorView: View {
                 .help("More Actions")
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, viewWidth < 380 ? 8 : 12)
+        .padding(.vertical, viewWidth < 380 ? 5 : 7)
         .background(Color.black.opacity(0.04))
     }
 
@@ -1734,5 +1878,13 @@ public struct NoteEditorView: View {
             }
         }
         return false
+    }
+}
+
+// MARK: - View Width Preference Key for Responsive Adaptation
+private struct NoteViewWidthPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 380
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
