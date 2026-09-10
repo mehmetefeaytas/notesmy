@@ -310,4 +310,101 @@ struct MeetingTests {
         // If not recording, pause shouldn't change isPaused to true
         #expect(service.isPaused == false)
     }
+
+    @Test("Speaker Diarization Service - Speaker Resolution, Rename, and Turn Splitting")
+    func testSpeakerDiarizationFeatures() {
+        let diarization = SpeakerDiarizationService.shared
+        diarization.reset(attendees: ["Ahmet", "Ayşe"])
+
+        // In-Person Mode speaker resolution
+        let speaker1 = diarization.resolveSpeaker(channel: .microphone, speakerId: 1, mode: .inPerson, attendees: ["Ahmet", "Ayşe"])
+        #expect(speaker1 == .custom("Ahmet"))
+
+        let speaker2 = diarization.resolveSpeaker(channel: .microphone, speakerId: 2, mode: .inPerson, attendees: ["Ahmet", "Ayşe"])
+        #expect(speaker2 == .custom("Ayşe"))
+
+        // Online Mode resolution without pre-seeded attendees
+        diarization.reset(attendees: [])
+        let speakerOnlineMic = diarization.resolveSpeaker(channel: .microphone, speakerId: 1, mode: .online, attendees: [])
+        #expect(speakerOnlineMic == .you)
+
+        let speakerOnlineSys = diarization.resolveSpeaker(channel: .systemAudio, speakerId: 1, mode: .online, attendees: [])
+        #expect(speakerOnlineSys == .remote)
+
+        // Bulk rename in transcript
+        var transcript = [
+            MeetingTranscriptEntry(timestamp: 5, speaker: .roomSpeaker(1), text: "Merhaba ekip."),
+            MeetingTranscriptEntry(timestamp: 15, speaker: .roomSpeaker(2), text: "Selamlar."),
+            MeetingTranscriptEntry(timestamp: 25, speaker: .roomSpeaker(1), text: "Toplantıya geçelim.")
+        ]
+
+        diarization.renameSpeakerInTranscript(
+            targetSpeaker: .roomSpeaker(1),
+            newName: "Zeynep Hanım",
+            transcript: &transcript
+        )
+
+        #expect(transcript[0].speaker == .custom("Zeynep Hanım"))
+        #expect(transcript[1].speaker == .roomSpeaker(2))
+        #expect(transcript[2].speaker == .custom("Zeynep Hanım"))
+
+        // Turn Splitting
+        let entryToSplit = transcript[1]
+        let didSplit = diarization.splitTranscriptEntry(
+            entryId: entryToSplit.id,
+            splitCharIndex: 3,
+            newSpeaker: .custom("Can"),
+            transcript: &transcript
+        )
+
+        #expect(didSplit == true)
+        #expect(transcript.count == 4)
+        #expect(transcript[1].text == "Sel")
+        #expect(transcript[2].text == "amlar.")
+        #expect(transcript[2].speaker == .custom("Can"))
+    }
+
+    @Test("Meeting Subtitle Export Formats - WebVTT & SRT (Meetily Plus)")
+    func testMeetingSubtitleExports() {
+        let entries = [
+            MeetingTranscriptEntry(timestamp: 2.5, duration: 3.0, speaker: .you, text: "Toplantı başladı."),
+            MeetingTranscriptEntry(timestamp: 7.0, duration: 4.5, speaker: .custom("Ahmet"), text: "Evet, sunum hazır.")
+        ]
+
+        let vtt = MeetingExportFormat.toWebVTT(entries: entries, isTurkish: true)
+        #expect(vtt.contains("WEBVTT"))
+        #expect(vtt.contains("00:00:02.500 --> 00:00:05.500"))
+        #expect(vtt.contains("<v Sen>Toplantı başladı."))
+        #expect(vtt.contains("<v Ahmet>Evet, sunum hazır."))
+
+        let srt = MeetingExportFormat.toSRT(entries: entries, isTurkish: true)
+        #expect(srt.contains("1\n"))
+        #expect(srt.contains("00:00:02,500 --> 00:00:05,500"))
+        #expect(srt.contains("[Sen]: Toplantı başladı."))
+        #expect(srt.contains("2\n"))
+        #expect(srt.contains("[Ahmet]: Evet, sunum hazır."))
+    }
+
+    @Test("Meeting AI - Disentangle Speakers with Question-Answer and Dialogue Cues")
+    func testDisentangleSpeakersWithAI() {
+        let mergedEntries = [
+            MeetingTranscriptEntry(
+                timestamp: 10,
+                duration: 6.0,
+                speaker: .remote,
+                text: "Ahmet: Tasarım bitti mi? Mehmet: Evet, Figma linkini paylaştım."
+            )
+        ]
+
+        let disentangled = MeetingAIService.shared.disentangleSpeakersWithAI(
+            transcript: mergedEntries,
+            attendees: ["Ahmet", "Mehmet"],
+            mode: .online,
+            isTurkish: true
+        )
+
+        #expect(disentangled.count >= 2)
+        #expect(disentangled.first?.text.contains("Tasarım bitti mi?") == true)
+        #expect(disentangled.last?.text.contains("Evet, Figma linkini paylaştım.") == true)
+    }
 }

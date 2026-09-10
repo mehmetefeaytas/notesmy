@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AVFoundation
 
 public struct MeetingStudioView: View {
     @ObservedObject var meetingService = MeetingRecordingService.shared
@@ -23,6 +24,30 @@ public struct MeetingStudioView: View {
     @State private var previewMode: Int = 0 // 0: Preview, 1: Raw Markdown Editor
     @State private var toastMessage: String?
     @State private var savedNote: NoteItem?
+
+    // Results view modes (0: AI Summary & Notes, 1: Speaker Transcript & Audio, 2: Split View)
+    @State private var resultViewMode: Int = 0
+    @State private var transcriptSearchQuery: String = ""
+    @State private var selectedSpeakerFilter: String? = nil
+
+    // Audio Playback Player (Meetily Plus)
+    @State private var audioPlayer: AVAudioPlayer?
+    @State private var isAudioPlaying: Bool = false
+    @State private var audioPlaybackTime: TimeInterval = 0
+    @State private var audioTotalDuration: TimeInterval = 0
+    @State private var audioPlaybackRate: Float = 1.0
+    @State private var playbackTimer: Timer?
+    @State private var activePlaybackEntryId: UUID?
+
+    // Speaker Renaming & Turn Splitting State
+    @State private var speakerToRename: MeetingSpeaker?
+    @State private var renameSpeakerInput: String = ""
+    @State private var showRenameSpeakerSheet: Bool = false
+
+    @State private var splittingEntry: MeetingTranscriptEntry?
+    @State private var splitCharPosition: Int = 0
+    @State private var splitNewSpeaker: MeetingSpeaker = .roomSpeaker(2)
+    @State private var showSplitSheet: Bool = false
 
     public init() {}
 
@@ -71,6 +96,12 @@ public struct MeetingStudioView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             meetingService.checkExistingPermissions()
+        }
+        .sheet(isPresented: $showRenameSpeakerSheet) {
+            renameSpeakerSheet
+        }
+        .sheet(isPresented: $showSplitSheet) {
+            splitUtteranceSheet
         }
     }
 
@@ -596,91 +627,152 @@ public struct MeetingStudioView: View {
         }
     }
 
-    // MARK: - 4. Post-Meeting Synthesis & Results View
+    // MARK: - 4. Post-Meeting Synthesis & Results View (Meetily Plus)
     private var resultsView: some View {
         VStack(spacing: 0) {
-            // Summary Header & Stats
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(lastMetadata?.title ?? (isTR ? "Toplantı Raporu" : "Meeting Report"))
-                        .font(.system(size: 16, weight: .bold))
-                    HStack(spacing: 8) {
-                        Label(lastMetadata?.formattedDuration ?? "00:00", systemImage: "clock")
-                        Label("\(lastTranscript.count) \(isTR ? "konuşma dökümü" : "transcript lines")", systemImage: "bubble.left.and.bubble.right")
-                        if let att = lastMetadata?.attendees, !att.isEmpty {
-                            Label("\(att.count) \(isTR ? "katılımcı" : "attendees")", systemImage: "person.2")
-                        }
-                    }
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                // Primary Save & Export Buttons
-                HStack(spacing: 14) {
-                    // Copy to clipboard
-                    Button {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(generatedContent, forType: .string)
-                        showToast(isTR ? "Panoya kopyalandı!" : "Copied to clipboard!")
-                    } label: {
-                        Label(isTR ? "Kopyala" : "Copy", systemImage: "doc.on.doc")
-                            .font(.system(size: 13, weight: .semibold))
-                            .padding(.vertical, 2)
-                    }
-                    .buttonStyle(.bordered)
-
-                    // Export PDF / RTF
-                    Menu {
-                        Button(isTR ? "PDF Olarak Kaydet..." : "Export as PDF...") {
-                            exportDirect(asPDF: true)
-                        }
-                        Button(isTR ? "RTF Olarak Kaydet..." : "Export as RTF...") {
-                            exportDirect(asPDF: false)
-                        }
-                    } label: {
-                        Label(isTR ? "Dışa Aktar" : "Export", systemImage: "square.and.arrow.up")
-                            .font(.system(size: 13, weight: .semibold))
-                            .padding(.vertical, 2)
-                    }
-                    .menuStyle(.borderedButton)
-
-                    // Save as Note
-                    Button {
-                        saveAsNote()
-                    } label: {
-                        HStack(spacing: 7) {
-                            Image(systemName: "square.and.arrow.down.fill")
-                            Text(savedNote != nil ? (isTR ? "Notu Aç" : "Open Note") : (isTR ? "Not Olarak Kaydet" : "Save as Note"))
-                        }
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(Color.blue)
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
-
-                    // New Meeting
-                    Button {
-                        resetToNewMeeting()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 13))
-                            .padding(.vertical, 2)
-                    }
-                    .buttonStyle(.bordered)
-                    .help(isTR ? "Yeni Toplantı Başlat" : "Start New Meeting")
-                }
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(Color(NSColor.controlBackgroundColor))
+            // Results Top Bar: Title, Stats, Mode Selector & Actions
+            resultsHeaderBar
 
             Divider()
 
+            // Optional Audio Player Bar
+            if lastMetadata?.audioFileURL != nil && (resultViewMode == 1 || resultViewMode == 2) {
+                audioPlayerBar
+                Divider()
+            }
+
+            // Main Content Area based on View Mode
+            if resultViewMode == 0 {
+                // Mode 0: AI Summary & Notes
+                aiSummaryView
+            } else if resultViewMode == 1 {
+                // Mode 1: Speaker Transcript & Synced Audio Player
+                interactiveTranscriptView
+            } else {
+                // Mode 2: Split View (Side by Side)
+                HSplitView {
+                    interactiveTranscriptView
+                        .frame(minWidth: 380)
+
+                    aiSummaryView
+                        .frame(minWidth: 380)
+                }
+            }
+        }
+    }
+
+    // MARK: - Results Header Bar
+    private var resultsHeaderBar: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(lastMetadata?.title ?? (isTR ? "Toplantı Raporu" : "Meeting Report"))
+                    .font(.system(size: 15, weight: .bold))
+                HStack(spacing: 8) {
+                    Label(lastMetadata?.formattedDuration ?? "00:00", systemImage: "clock")
+                    Label("\(lastTranscript.count) \(isTR ? "konuşma" : "turns")", systemImage: "bubble.left.and.bubble.right")
+                    if let att = lastMetadata?.attendees, !att.isEmpty {
+                        Label("\(att.count) \(isTR ? "katılımcı" : "attendees")", systemImage: "person.2")
+                    }
+                }
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // View Mode Picker
+            Picker("", selection: $resultViewMode) {
+                Label(isTR ? "EA Özeti" : "AI Summary", systemImage: "doc.plaintext.fill").tag(0)
+                Label(isTR ? "Konuşmacılar & Ses" : "Speakers & Audio", systemImage: "person.wave.2.fill").tag(1)
+                Label(isTR ? "Yan Yana" : "Split", systemImage: "rectangle.split.2x1.fill").tag(2)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 320)
+
+            Spacer()
+
+            // Primary Save & Export Buttons
+            HStack(spacing: 10) {
+                // Copy
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(generatedContent, forType: .string)
+                    showToast(isTR ? "Panoya kopyalandı!" : "Copied to clipboard!")
+                } label: {
+                    Label(isTR ? "Kopyala" : "Copy", systemImage: "doc.on.doc")
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.bordered)
+
+                // Export Menu
+                Menu {
+                    Button(isTR ? "PDF Olarak Kaydet..." : "Export as PDF...") {
+                        exportDirect(asPDF: true)
+                    }
+                    Button(isTR ? "RTF Olarak Kaydet..." : "Export as RTF...") {
+                        exportDirect(asPDF: false)
+                    }
+                    Button(isTR ? "Markdown (.md) Olarak Kaydet..." : "Export as Markdown (.md)...") {
+                        exportAsMarkdown()
+                    }
+                    Divider()
+                    Button(isTR ? "Altyazı (WebVTT - .vtt) Olarak Dışa Aktar..." : "Export Subtitles (WebVTT - .vtt)...") {
+                        exportAsWebVTT()
+                    }
+                    Button(isTR ? "Altyazı (SubRip - .srt) Olarak Dışa Aktar..." : "Export Subtitles (SubRip - .srt)...") {
+                        exportAsSRT()
+                    }
+                    if let audioURL = lastMetadata?.audioFileURL {
+                        Divider()
+                        Button(isTR ? "Ses Dosyasını Kaydet (.caf)..." : "Export Audio File (.caf)...") {
+                            exportAudioFile(audioURL: audioURL)
+                        }
+                    }
+                } label: {
+                    Label(isTR ? "Dışa Aktar" : "Export", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .padding(.vertical, 2)
+                }
+                .menuStyle(.borderedButton)
+
+                // Save as Note
+                Button {
+                    saveAsNote()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.down.fill")
+                        Text(savedNote != nil ? (isTR ? "Notu Aç" : "Open Note") : (isTR ? "Not Olarak Kaydet" : "Save as Note"))
+                    }
+                    .font(.system(size: 12.5, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue)
+                    .cornerRadius(7)
+                }
+                .buttonStyle(.plain)
+
+                // New Meeting
+                Button {
+                    resetToNewMeeting()
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 12))
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.bordered)
+                .help(isTR ? "Yeni Toplantı Başlat" : "Start New Meeting")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    // MARK: - AI Summary View
+    private var aiSummaryView: some View {
+        VStack(spacing: 0) {
             // Template Tabs
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
@@ -708,8 +800,8 @@ public struct MeetingStudioView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
             }
             .background(Material.bar)
 
@@ -745,13 +837,13 @@ public struct MeetingStudioView: View {
                     .buttonStyle(.bordered)
                 }
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, 16)
             .padding(.vertical, 6)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
 
             Divider()
 
-            // Note Content (Preview or Raw Edit)
+            // Note Content
             if previewMode == 0 {
                 MarkdownRendererView(markdown: generatedContent, localColor: .sky)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -766,48 +858,643 @@ public struct MeetingStudioView: View {
         }
     }
 
-    // MARK: - Bubble Component for Live Transcript
-    private func transcriptBubble(entry: MeetingTranscriptEntry) -> some View {
-        let isYou = (entry.speaker == .you)
-        let bubbleColor = isYou ? Color.blue.opacity(0.1) : Color.purple.opacity(0.1)
-        let strokeColor = isYou ? Color.blue.opacity(0.3) : Color.purple.opacity(0.3)
+    // MARK: - Synchronized Audio Player Bar (Meetily Plus)
+    private var audioPlayerBar: some View {
+        HStack(spacing: 12) {
+            Button {
+                toggleAudioPlayback()
+            } label: {
+                Image(systemName: isAudioPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.blue)
+            }
+            .buttonStyle(.plain)
+            .help(isAudioPlaying ? (isTR ? "Duraklat" : "Pause") : (isTR ? "Oynat" : "Play"))
 
-        return HStack(alignment: .top, spacing: 8) {
-            Image(systemName: entry.speaker.icon)
-                .font(.system(size: 13))
-                .foregroundColor(isYou ? .blue : .purple)
-                .frame(width: 20)
-                .padding(.top, 2)
+            Text(formatTime(audioPlaybackTime))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(.primary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
+            Slider(
+                value: Binding(
+                    get: { audioPlaybackTime },
+                    set: { newTime in
+                        seekAudio(to: newTime)
+                    }
+                ),
+                in: 0...max(1.0, audioTotalDuration)
+            )
+
+            Text(formatTime(audioTotalDuration))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.secondary)
+
+            // Playback Rate
+            Menu {
+                Button("1.0x") { setPlaybackRate(1.0) }
+                Button("1.25x") { setPlaybackRate(1.25) }
+                Button("1.5x") { setPlaybackRate(1.5) }
+                Button("2.0x") { setPlaybackRate(2.0) }
+            } label: {
+                Text(String(format: "%.2gx", audioPlaybackRate))
+                    .font(.system(size: 11, weight: .bold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12))
+                    .cornerRadius(6)
+            }
+            .menuStyle(.borderlessButton)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.blue.opacity(0.04))
+    }
+
+    // MARK: - Interactive Transcript View (Meetily Plus)
+    private var interactiveTranscriptView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Search Bar & Filter Chips & AI Disentangle
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                        TextField(isTR ? "Dökümde ara..." : "Search transcript...", text: $transcriptSearchQuery)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 12))
+                        if !transcriptSearchQuery.isEmpty {
+                            Button {
+                                transcriptSearchQuery = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 11))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(7)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+                    )
+
+                    Spacer()
+
+                    // AI Disentangle Button
+                    Button {
+                        disentangleWithAI()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "sparkles")
+                            Text(isTR ? "EA ile Konuşmacıları Ayrıştır" : "Disentangle with AI")
+                        }
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.purple.opacity(0.12))
+                        .foregroundColor(.purple)
+                        .cornerRadius(7)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7)
+                                .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help(isTR ? "Birbirine karışan cümleleri EA ile tespit edip konuşmacılarına göre ayırır." : "Uses AI to detect dialogue turns and separate mixed speech.")
+                }
+
+                // Speaker Filter Chips
+                let uniqueSpeakers = Array(Set(lastTranscript.map { $0.speaker })).sorted { $0.shortLabel(isTurkish: isTR) < $1.shortLabel(isTurkish: isTR) }
+                if uniqueSpeakers.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            Button {
+                                selectedSpeakerFilter = nil
+                            } label: {
+                                Text(isTR ? "Tüm Konuşmacılar" : "All Speakers")
+                                    .font(.system(size: 11, weight: selectedSpeakerFilter == nil ? .bold : .medium))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(selectedSpeakerFilter == nil ? Color.blue : Color.secondary.opacity(0.12))
+                                    .foregroundColor(selectedSpeakerFilter == nil ? .white : .primary)
+                                    .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+
+                            ForEach(uniqueSpeakers, id: \.self) { spk in
+                                let spkLabel = spk.shortLabel(isTurkish: isTR)
+                                let isSelected = (selectedSpeakerFilter == spk.rawIdentifier)
+                                let colors = speakerBadgeColors(colorIndex: spk.colorIndex)
+
+                                Button {
+                                    if isSelected {
+                                        selectedSpeakerFilter = nil
+                                    } else {
+                                        selectedSpeakerFilter = spk.rawIdentifier
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Circle()
+                                            .fill(colors.fg)
+                                            .frame(width: 6, height: 6)
+                                        Text(spkLabel)
+                                    }
+                                    .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(isSelected ? colors.fg : colors.bg)
+                                    .foregroundColor(isSelected ? .white : colors.fg)
+                                    .cornerRadius(6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+
+            Divider()
+
+            // Transcript Entries
+            let filteredEntries = lastTranscript.filter { entry in
+                if let filter = selectedSpeakerFilter, entry.speaker.rawIdentifier != filter {
+                    return false
+                }
+                if !transcriptSearchQuery.isEmpty {
+                    return entry.text.localizedCaseInsensitiveContains(transcriptSearchQuery)
+                }
+                return true
+            }
+
+            if filteredEntries.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "text.magnifyingglass")
+                        .font(.system(size: 28))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    Text(isTR ? "Eşleşen konuşma kaydı bulunamadı." : "No matching transcript entries found.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.vertical, 40)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(filteredEntries) { entry in
+                                transcriptBubble(entry: entry, isInteractive: true)
+                                    .id(entry.id)
+                            }
+                        }
+                        .padding(14)
+                    }
+                    .onChange(of: activePlaybackEntryId) { newId in
+                        if let id = newId {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                proxy.scrollTo(id, anchor: .center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .background(Color(NSColor.textBackgroundColor))
+    }
+
+    // MARK: - Bubble Component for Live Transcript & Interactive Review
+    private func transcriptBubble(entry: MeetingTranscriptEntry, isInteractive: Bool = false) -> some View {
+        let colors = speakerBadgeColors(colorIndex: entry.speaker.colorIndex)
+        let isPlayingThis = (activePlaybackEntryId == entry.id)
+
+        return HStack(alignment: .top, spacing: 10) {
+            // Speaker Badge
+            if isInteractive {
+                Menu {
+                    Button {
+                        self.speakerToRename = entry.speaker
+                        self.renameSpeakerInput = entry.speaker.displayName(isTurkish: isTR)
+                        self.showRenameSpeakerSheet = true
+                    } label: {
+                        Label(isTR ? "Konuşmacıyı Yeniden Adlandır..." : "Rename Speaker...", systemImage: "pencil")
+                    }
+
+                    if let attendees = lastMetadata?.attendees, !attendees.isEmpty {
+                        Menu(isTR ? "Katılımcı Olarak Ata" : "Assign to Attendee") {
+                            ForEach(attendees, id: \.self) { att in
+                                Button(att) {
+                                    renameSpeakerInResults(from: entry.speaker, to: att)
+                                }
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    Button {
+                        self.splittingEntry = entry
+                        self.splitCharPosition = entry.text.count / 2
+                        self.showSplitSheet = true
+                    } label: {
+                        Label(isTR ? "Bu Cümleyi Böl (Ayrıştır)..." : "Split Utterance...", systemImage: "arrow.triangle.branch")
+                    }
+
+                    Button {
+                        seekAudio(to: entry.timestamp)
+                    } label: {
+                        Label(isTR ? "Bu Noktadan Dinle" : "Play from Here", systemImage: "play.fill")
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: entry.speaker.icon)
+                            .font(.system(size: 11))
+                        Text(entry.speaker.shortLabel(isTurkish: isTR))
+                            .font(.system(size: 11, weight: .bold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .bold))
+                            .opacity(0.6)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(colors.bg)
+                    .foregroundColor(colors.fg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.stroke, lineWidth: 1)
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: entry.speaker.icon)
+                        .font(.system(size: 11))
                     Text(entry.speaker.shortLabel(isTurkish: isTR))
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(isYou ? .blue : .purple)
-                    Text(entry.formattedTime)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(colors.bg)
+                .foregroundColor(colors.fg)
+                .cornerRadius(6)
+                .fixedSize()
+            }
+
+            // Bubble Content
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Button {
+                        if isInteractive {
+                            seekAudio(to: entry.timestamp)
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            if isPlayingThis && isAudioPlaying {
+                                Image(systemName: "waveform")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.blue)
+                            }
+                            Text(entry.formattedTime)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundColor(isPlayingThis ? .blue : .secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    if entry.duration > 0 {
+                        Text("• \(String(format: "%.1fs", entry.duration))")
+                            .font(.system(size: 9.5))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    }
+
+                    Spacer()
+
+                    if isInteractive {
+                        Button {
+                            seekAudio(to: entry.timestamp)
+                        } label: {
+                            Image(systemName: isPlayingThis && isAudioPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 Text(entry.text)
                     .font(.system(size: 13))
                     .foregroundColor(.primary)
                     .textSelection(.enabled)
+                    .lineSpacing(2)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(bubbleColor)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isPlayingThis ? Color.blue.opacity(0.12) : colors.bg.opacity(0.5))
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(strokeColor, lineWidth: 1)
+                    .stroke(isPlayingThis ? Color.blue : colors.stroke.opacity(0.6), lineWidth: isPlayingThis ? 2 : 1)
             )
-
-            Spacer()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isInteractive {
+                    seekAudio(to: entry.timestamp)
+                }
+            }
         }
     }
 
-    // MARK: - Actions & Helpers
+    // MARK: - Speaker Badge Colors Helper
+    private func speakerBadgeColors(colorIndex: Int) -> (bg: Color, fg: Color, stroke: Color) {
+        switch colorIndex {
+        case 0:
+            return (Color.blue.opacity(0.12), Color.blue, Color.blue.opacity(0.4))
+        case 1:
+            return (Color.purple.opacity(0.12), Color.purple, Color.purple.opacity(0.4))
+        case 2:
+            return (Color.green.opacity(0.14), Color.green, Color.green.opacity(0.4))
+        case 3:
+            return (Color.orange.opacity(0.14), Color.orange, Color.orange.opacity(0.4))
+        case 4:
+            return (Color.pink.opacity(0.14), Color.pink, Color.pink.opacity(0.4))
+        case 5:
+            return (Color.cyan.opacity(0.14), Color.cyan, Color.cyan.opacity(0.4))
+        case 6:
+            return (Color.indigo.opacity(0.14), Color.indigo, Color.indigo.opacity(0.4))
+        default:
+            return (Color.teal.opacity(0.14), Color.teal, Color.teal.opacity(0.4))
+        }
+    }
+
+    // MARK: - Sheets: Rename Speaker & Split Turn
+    private var renameSpeakerSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(isTR ? "Konuşmacıyı Yeniden Adlandır" : "Rename Speaker")
+                    .font(.system(size: 15, weight: .bold))
+                Spacer()
+                Button {
+                    showRenameSpeakerSheet = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text(isTR
+                 ? "Bu konuşmacının toplantı dökümündeki ve tutanağındaki adını güncelleyin:"
+                 : "Update the displayed name for this speaker across the entire meeting minutes:")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+
+            TextField(isTR ? "Örn: Ahmet Bey, Ayşe Hanım, Müşteri Temsilcisi..." : "e.g. John Doe, Sarah, Client Representative...", text: $renameSpeakerInput)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 13))
+
+            if let att = lastMetadata?.attendees, !att.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isTR ? "Kayıtlı Katılımcılardan Seç:" : "Quick Select from Attendees:")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    FlowLayout(spacing: 6) {
+                        ForEach(att, id: \.self) { a in
+                            Button(a) {
+                                renameSpeakerInput = a
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button(isTR ? "İptal" : "Cancel") {
+                    showRenameSpeakerSheet = false
+                }
+                .buttonStyle(.bordered)
+
+                Button(isTR ? "Tüm Dökümde Güncelle" : "Update All Occurrences") {
+                    if let target = speakerToRename {
+                        renameSpeakerInResults(from: target, to: renameSpeakerInput)
+                    }
+                    showRenameSpeakerSheet = false
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(renameSpeakerInput.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 420)
+    }
+
+    private var splitUtteranceSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(isTR ? "Cümleyi İki Konuşmacıya Böl" : "Split Utterance Between Speakers")
+                    .font(.system(size: 15, weight: .bold))
+                Spacer()
+                Button {
+                    showSplitSheet = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if let entry = splittingEntry {
+                Text(isTR
+                     ? "Eğer iki kişi arka arkaya konuştuysa ve tek cümle olduysa buradan bölün:"
+                     : "If two people spoke consecutively and were captured in one block, split them here:")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isTR ? "Mevcut Metin:" : "Original Utterance:")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(entry.text)
+                        .font(.system(size: 12))
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.secondary.opacity(0.08))
+                        .cornerRadius(8)
+                }
+
+                // Pick second speaker
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isTR ? "İkinci Konuşmacı Kim?" : "Who is the Second Speaker?")
+                        .font(.system(size: 11, weight: .semibold))
+
+                    Picker("", selection: $splitNewSpeaker) {
+                        Text(isTR ? "Sen (Mikrofon)" : "You").tag(MeetingSpeaker.you)
+                        Text(isTR ? "Katılımcılar (Ekran)" : "Remote").tag(MeetingSpeaker.remote)
+                        ForEach(1...5, id: \.self) { idx in
+                            Text(isTR ? "Konuşmacı \(idx)" : "Speaker \(idx)").tag(MeetingSpeaker.roomSpeaker(idx))
+                        }
+                        if let att = lastMetadata?.attendees {
+                            ForEach(att, id: \.self) { name in
+                                Text(name).tag(MeetingSpeaker.custom(name))
+                            }
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                HStack {
+                    Spacer()
+                    Button(isTR ? "İptal" : "Cancel") {
+                        showSplitSheet = false
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(isTR ? "Cümleyi Ortadan Böl" : "Split Utterance") {
+                        let text = entry.text
+                        let half = max(1, text.count / 2)
+                        _ = SpeakerDiarizationService.shared.splitTranscriptEntry(
+                            entryId: entry.id,
+                            splitCharIndex: half,
+                            newSpeaker: splitNewSpeaker,
+                            transcript: &lastTranscript
+                        )
+                        regenerateTemplateContent()
+                        showSplitSheet = false
+                        showToast(isTR ? "Cümle iki konuşmacıya bölündü!" : "Utterance split!")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .padding(20)
+        .frame(width: 440)
+    }
+
+    // MARK: - Actions & Audio Playback Helpers
+    private func setupAudioPlayerIfNeeded() {
+        guard audioPlayer == nil, let url = lastMetadata?.audioFileURL else { return }
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.enableRate = true
+            player.rate = audioPlaybackRate
+            player.prepareToPlay()
+            self.audioPlayer = player
+            self.audioTotalDuration = player.duration
+        } catch {
+            print("Failed to initialize AVAudioPlayer: \(error)")
+        }
+    }
+
+    private func toggleAudioPlayback() {
+        setupAudioPlayerIfNeeded()
+        guard let player = audioPlayer else { return }
+        if player.isPlaying {
+            player.pause()
+            isAudioPlaying = false
+            playbackTimer?.invalidate()
+            playbackTimer = nil
+        } else {
+            player.rate = audioPlaybackRate
+            player.play()
+            isAudioPlaying = true
+            startPlaybackTimer()
+        }
+    }
+
+    private func startPlaybackTimer() {
+        playbackTimer?.invalidate()
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+            Task { @MainActor in
+                guard let player = self.audioPlayer else { return }
+                self.audioPlaybackTime = player.currentTime
+                if !player.isPlaying {
+                    self.isAudioPlaying = false
+                    self.playbackTimer?.invalidate()
+                    self.playbackTimer = nil
+                }
+                self.updateActivePlaybackEntry()
+            }
+        }
+    }
+
+    private func updateActivePlaybackEntry() {
+        let t = audioPlaybackTime
+        if let entry = lastTranscript.first(where: { t >= $0.timestamp && t < ($0.timestamp + max(1.5, $0.duration)) }) {
+            self.activePlaybackEntryId = entry.id
+        } else {
+            self.activePlaybackEntryId = nil
+        }
+    }
+
+    private func seekAudio(to timestamp: TimeInterval) {
+        setupAudioPlayerIfNeeded()
+        guard let player = audioPlayer else { return }
+        player.currentTime = timestamp
+        self.audioPlaybackTime = timestamp
+        updateActivePlaybackEntry()
+        if !player.isPlaying {
+            player.rate = audioPlaybackRate
+            player.play()
+            isAudioPlaying = true
+            startPlaybackTimer()
+        }
+    }
+
+    private func setPlaybackRate(_ rate: Float) {
+        audioPlaybackRate = rate
+        audioPlayer?.rate = rate
+    }
+
+    private func cleanupAudioPlayer() {
+        playbackTimer?.invalidate()
+        playbackTimer = nil
+        audioPlayer?.stop()
+        audioPlayer = nil
+        isAudioPlaying = false
+        audioPlaybackTime = 0
+        activePlaybackEntryId = nil
+    }
+
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds)
+        let mins = total / 60
+        let secs = total % 60
+        return String(format: "%02d:%02d", mins, secs)
+    }
+
+    private func renameSpeakerInResults(from target: MeetingSpeaker, to newName: String) {
+        SpeakerDiarizationService.shared.renameSpeakerInTranscript(
+            targetSpeaker: target,
+            newName: newName,
+            transcript: &lastTranscript
+        )
+        meetingService.renameSpeaker(target: target, newName: newName)
+        regenerateTemplateContent()
+        showToast(isTR ? "\(newName) olarak güncellendi!" : "Renamed to \(newName)!")
+    }
+
+    private func disentangleWithAI() {
+        let disentangled = MeetingAIService.shared.disentangleSpeakersWithAI(
+            transcript: lastTranscript,
+            attendees: lastMetadata?.attendees ?? [],
+            mode: lastMetadata?.mode ?? .online
+        )
+        self.lastTranscript = disentangled
+        regenerateTemplateContent()
+        showToast(isTR ? "Konuşmacılar EA ile başarıyla ayrıştırıldı!" : "Speakers disentangled with AI!")
+    }
+
     private func addAttendee() {
         let clean = newAttendeeText.trimmingCharacters(in: .whitespaces)
         if !clean.isEmpty && !attendees.contains(clean) {
@@ -838,6 +1525,7 @@ public struct MeetingStudioView: View {
         self.showResults = true
         self.savedNote = nil
 
+        setupAudioPlayerIfNeeded()
         regenerateTemplateContent()
     }
 
@@ -903,7 +1591,46 @@ public struct MeetingStudioView: View {
         }
     }
 
+    private func exportAsMarkdown() {
+        let title = lastMetadata?.title ?? "Meeting"
+        promptSaveTextFile(filename: "\(title).md", content: generatedContent)
+    }
+
+    private func exportAsWebVTT() {
+        let title = lastMetadata?.title ?? "Meeting_Transcript"
+        let content = MeetingExportFormat.toWebVTT(entries: lastTranscript, isTurkish: isTR)
+        promptSaveTextFile(filename: "\(title).vtt", content: content)
+    }
+
+    private func exportAsSRT() {
+        let title = lastMetadata?.title ?? "Meeting_Transcript"
+        let content = MeetingExportFormat.toSRT(entries: lastTranscript, isTurkish: isTR)
+        promptSaveTextFile(filename: "\(title).srt", content: content)
+    }
+
+    private func exportAudioFile(audioURL: URL) {
+        let title = lastMetadata?.title ?? "Meeting_Audio"
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "\(title).caf"
+        if panel.runModal() == .OK, let target = panel.url {
+            try? FileManager.default.copyItem(at: audioURL, to: target)
+            showToast(isTR ? "Ses dosyası dışa aktarıldı!" : "Audio exported!")
+        }
+    }
+
+    private func promptSaveTextFile(filename: String, content: String) {
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = filename
+        if panel.runModal() == .OK, let target = panel.url {
+            try? content.write(to: target, atomically: true, encoding: .utf8)
+            showToast(isTR ? "Dosya kaydedildi!" : "File saved!")
+        }
+    }
+
     private func resetToNewMeeting() {
+        cleanupAudioPlayer()
         self.showResults = false
         self.lastMetadata = nil
         self.lastTranscript = []
@@ -912,6 +1639,8 @@ public struct MeetingStudioView: View {
         self.meetingTitleInput = ""
         self.attendees = []
         self.savedNote = nil
+        self.transcriptSearchQuery = ""
+        self.selectedSpeakerFilter = nil
     }
 
     private func showToast(_ message: String) {

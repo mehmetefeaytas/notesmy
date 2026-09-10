@@ -644,4 +644,104 @@ public final class MeetingAIService: Sendable {
     private func escapeMarkdown(_ str: String) -> String {
         return str.replacingOccurrences(of: "|", with: "\\|")
     }
+
+    // MARK: - AI Speaker Disentanglement (Meetily Plus)
+    public func disentangleSpeakersWithAI(
+        transcript: [MeetingTranscriptEntry],
+        attendees: [String] = [],
+        mode: MeetingMode = .online,
+        isTurkish: Bool = true
+    ) -> [MeetingTranscriptEntry] {
+        guard !transcript.isEmpty else { return [] }
+
+        var disentangled: [MeetingTranscriptEntry] = []
+        var currentSpeakerIndex = 1
+        let candidateSpeakers = attendees.isEmpty
+            ? [MeetingSpeaker.you, MeetingSpeaker.roomSpeaker(1), MeetingSpeaker.roomSpeaker(2), MeetingSpeaker.roomSpeaker(3)]
+            : attendees.map { MeetingSpeaker.custom($0) }
+
+        for entry in transcript {
+            let text = entry.text
+
+            // Check if entry has explicit speaker mentions or embedded dialogue turns (e.g. "Ahmet: ... Mehmet: ...")
+            let lines = splitEmbeddedTurns(text: text)
+
+            if lines.count > 1 {
+                var offset: TimeInterval = 0
+                let chunkDuration = max(1.5, entry.duration / Double(lines.count))
+
+                for (idx, line) in lines.enumerated() {
+                    let (detectedSpeaker, cleanLine) = extractSpeakerPrefix(line: line, candidates: candidateSpeakers)
+                    let speakerToUse = detectedSpeaker ?? candidateSpeakers[min(idx, candidateSpeakers.count - 1)]
+
+                    let subEntry = MeetingTranscriptEntry(
+                        id: UUID(),
+                        timestamp: entry.timestamp + offset,
+                        duration: chunkDuration,
+                        speaker: speakerToUse,
+                        text: cleanLine,
+                        isFinal: true
+                    )
+                    disentangled.append(subEntry)
+                    offset += chunkDuration
+                }
+            } else {
+                let (detectedSpeaker, cleanLine) = extractSpeakerPrefix(line: text, candidates: candidateSpeakers)
+                var resolvedSpeaker = detectedSpeaker ?? entry.speaker
+
+                // If speaker was generic remote and we have attendees
+                if resolvedSpeaker == .remote && !attendees.isEmpty {
+                    resolvedSpeaker = .custom(attendees[min(currentSpeakerIndex, attendees.count - 1)])
+                    currentSpeakerIndex = (currentSpeakerIndex + 1) % attendees.count
+                }
+
+                var updated = entry
+                updated.speaker = resolvedSpeaker
+                updated.text = cleanLine
+                disentangled.append(updated)
+            }
+        }
+
+        return disentangled
+    }
+
+    private func splitEmbeddedTurns(text: String) -> [String] {
+        var result: [String] = []
+        let paragraphs = text.components(separatedBy: "\n")
+
+        for p in paragraphs {
+            let trimmed = p.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+
+            if trimmed.contains("? ") {
+                let parts = trimmed.components(separatedBy: "? ")
+                for (i, part) in parts.enumerated() {
+                    let clean = (i < parts.count - 1) ? part + "?" : part
+                    if !clean.isEmpty {
+                        result.append(clean.trimmingCharacters(in: .whitespaces))
+                    }
+                }
+            } else {
+                result.append(trimmed)
+            }
+        }
+
+        return result.isEmpty ? [text] : result
+    }
+
+    private func extractSpeakerPrefix(line: String, candidates: [MeetingSpeaker]) -> (MeetingSpeaker?, String) {
+        for candidate in candidates {
+            let label = candidate.displayName(isTurkish: true)
+            let short = candidate.shortLabel(isTurkish: true)
+            let possiblePrefixes = ["\(label):", "\(label) -", "\(short):", "\(short) -"]
+
+            for p in possiblePrefixes {
+                if line.hasPrefix(p) {
+                    let rest = String(line.dropFirst(p.count)).trimmingCharacters(in: .whitespaces)
+                    return (candidate, rest)
+                }
+            }
+        }
+        return (nil, line)
+    }
 }

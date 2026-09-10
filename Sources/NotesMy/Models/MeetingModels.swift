@@ -7,12 +7,34 @@ public enum MeetingSpeaker: Codable, Equatable, Hashable, Sendable {
     case roomSpeaker(Int)   // In-person detected room speakers
     case custom(String)     // User-customized speaker name
 
+    public var rawIdentifier: String {
+        switch self {
+        case .you: return "you"
+        case .remote: return "remote"
+        case .roomSpeaker(let idx): return "speaker_\(idx)"
+        case .custom(let name): return "custom_\(name)"
+        }
+    }
+
+    public var colorIndex: Int {
+        switch self {
+        case .you: return 0           // Blue
+        case .remote: return 1        // Purple
+        case .roomSpeaker(let idx):
+            let palette = [1, 2, 3, 4, 5, 6] // purple, emerald, orange, pink, cyan, indigo
+            return palette[(idx - 1) % palette.count]
+        case .custom(let name):
+            let hash = abs(name.hashValue)
+            return (hash % 6) + 1
+        }
+    }
+
     public func displayName(isTurkish: Bool) -> String {
         switch self {
         case .you:
             return isTR(isTurkish) ? "Sen (Mikrofon)" : "You (Microphone)"
         case .remote:
-            return isTR(isTurkish) ? "Toplantı (Ekran / Zoom / Teams)" : "Meeting (Screen / Remote)"
+            return isTR(isTurkish) ? "Katılımcılar (Ekran)" : "Meeting (Screen / Remote)"
         case .roomSpeaker(let idx):
             return isTR(isTurkish) ? "Konuşmacı \(idx)" : "Speaker \(idx)"
         case .custom(let name):
@@ -59,22 +81,28 @@ public enum MeetingSpeaker: Codable, Equatable, Hashable, Sendable {
 public struct MeetingTranscriptEntry: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var timestamp: TimeInterval // Elapsed seconds from start of meeting
+    public var duration: TimeInterval
     public var speaker: MeetingSpeaker
     public var text: String
     public var isFinal: Bool
+    public var confidence: Float
 
     public init(
         id: UUID = UUID(),
         timestamp: TimeInterval,
+        duration: TimeInterval = 2.0,
         speaker: MeetingSpeaker,
         text: String,
-        isFinal: Bool = true
+        isFinal: Bool = true,
+        confidence: Float = 1.0
     ) {
         self.id = id
         self.timestamp = timestamp
+        self.duration = duration
         self.speaker = speaker
         self.text = text
         self.isFinal = isFinal
+        self.confidence = confidence
     }
 
     public var formattedTime: String {
@@ -82,6 +110,60 @@ public struct MeetingTranscriptEntry: Identifiable, Codable, Equatable, Sendable
         let mins = totalSeconds / 60
         let secs = totalSeconds % 60
         return String(format: "%02d:%02d", mins, secs)
+    }
+
+    public var formattedEndTimestamp: String {
+        let totalSeconds = Int(timestamp + max(1.0, duration))
+        let mins = totalSeconds / 60
+        let secs = totalSeconds % 60
+        return String(format: "%02d:%02d", mins, secs)
+    }
+}
+
+/// Helper for exporting transcripts in standard subtitle and caption formats (Meetily Plus style)
+public enum MeetingExportFormat {
+    public static func toWebVTT(entries: [MeetingTranscriptEntry], isTurkish: Bool) -> String {
+        var vtt = "WEBVTT - NotesMy Meeting Transcript\n\n"
+        for (i, entry) in entries.enumerated() {
+            let start = formatTimeVTT(entry.timestamp)
+            let end = formatTimeVTT(entry.timestamp + max(1.5, entry.duration))
+            let speaker = entry.speaker.shortLabel(isTurkish: isTurkish)
+            vtt += "\(i + 1)\n"
+            vtt += "\(start) --> \(end)\n"
+            vtt += "<v \(speaker)>\(entry.text)\n\n"
+        }
+        return vtt
+    }
+
+    public static func toSRT(entries: [MeetingTranscriptEntry], isTurkish: Bool) -> String {
+        var srt = ""
+        for (i, entry) in entries.enumerated() {
+            let start = formatTimeSRT(entry.timestamp)
+            let end = formatTimeSRT(entry.timestamp + max(1.5, entry.duration))
+            let speaker = entry.speaker.shortLabel(isTurkish: isTurkish)
+            srt += "\(i + 1)\n"
+            srt += "\(start) --> \(end)\n"
+            srt += "[\(speaker)]: \(entry.text)\n\n"
+        }
+        return srt
+    }
+
+    private static func formatTimeVTT(_ seconds: TimeInterval) -> String {
+        let totalMs = Int(seconds * 1000)
+        let s = (totalMs / 1000) % 60
+        let m = (totalMs / (1000 * 60)) % 60
+        let h = totalMs / (1000 * 60 * 60)
+        let ms = totalMs % 1000
+        return String(format: "%02d:%02d:%02d.%03d", h, m, s, ms)
+    }
+
+    private static func formatTimeSRT(_ seconds: TimeInterval) -> String {
+        let totalMs = Int(seconds * 1000)
+        let s = (totalMs / 1000) % 60
+        let m = (totalMs / (1000 * 60)) % 60
+        let h = totalMs / (1000 * 60 * 60)
+        let ms = totalMs % 1000
+        return String(format: "%02d:%02d:%02d,%03d", h, m, s, ms)
     }
 }
 

@@ -23,19 +23,23 @@ private final class MeetingMicRelay: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
     private let file: AVAudioFile?
     private let onMeter: @Sendable (Float) -> Void
+    private let onBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
 
     init(
         request: SFSpeechAudioBufferRecognitionRequest,
         file: AVAudioFile?,
-        onMeter: @escaping @Sendable (Float) -> Void
+        onMeter: @escaping @Sendable (Float) -> Void,
+        onBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)? = nil
     ) {
         self.request = request
         self.file = file
         self.onMeter = onMeter
+        self.onBuffer = onBuffer
     }
 
     nonisolated func appendBuffer(_ buffer: AVAudioPCMBuffer) {
         request.append(buffer)
+        onBuffer?(buffer)
         if let file = file {
             do {
                 try file.write(from: buffer)
@@ -146,6 +150,14 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
     private var timer: Timer?
     private var meetingStartDate: Date?
     private var lastRecordedUtteranceText: String = ""
+
+    // Streaming recognition segmentation & Diarization state (Meetily Plus)
+    private var micTextBaseOffset: Int = 0
+    private var systemTextBaseOffset: Int = 0
+    private var activeMicSpeakerId: Int = 1
+    private var activeSystemSpeakerId: Int = 1
+    private var isMicNewTurnPending: Bool = false
+    private var isSystemNewTurnPending: Bool = false
 
     public override init() {
         super.init()
@@ -269,6 +281,14 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         self.meetingStartDate = Date()
         self.recordingNotice = nil
 
+        self.micTextBaseOffset = 0
+        self.systemTextBaseOffset = 0
+        self.activeMicSpeakerId = 1
+        self.activeSystemSpeakerId = 1
+        self.isMicNewTurnPending = false
+        self.isSystemNewTurnPending = false
+        SpeakerDiarizationService.shared.reset(attendees: attendees)
+
         // Cleanly prompt for mic/speech if not yet determined (without popping open settings)
         if !hasMicPermission {
             _ = await requestMicPermission()
@@ -332,7 +352,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         self.systemSpeechRecognizer = sysRec
     }
 
-    // MARK: - Microphone Capture
+    // MARK: - Microphone Audio Capture
     private func startMicrophoneCapture(outputURL: URL) -> Bool {
         let engine = AVAudioEngine()
         self.audioEngine = engine
@@ -371,18 +391,39 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
                     guard let self = self, self.isRecording, !self.isPaused else { return }
                     if let result = result {
                         let text = result.bestTranscription.formattedString
-                        self.handleSpeechTranscription(text: text, speaker: .you, isFinal: result.isFinal)
+                        self.handleSpeechTranscription(channel: .microphone, fullRawText: text, isRecognizerFinal: result.isFinal)
                     }
                 }
             }
         }
 
-        let relay = MeetingMicRelay(request: request, file: micAudioFile) { [weak self] level in
-            Task { @MainActor [weak self] in
-                guard let self = self, self.isRecording, !self.isPaused else { return }
-                self.micLevel = level
+        let relay = MeetingMicRelay(
+            request: request,
+            file: micAudioFile,
+            onMeter: { [weak self] level in
+                Task { @MainActor [weak self] in
+                    guard let self = self, self.isRecording, !self.isPaused else { return }
+                    self.micLevel = level
+                }
+            },
+            onBuffer: { [weak self] buffer in
+                let res = SpeakerDiarizationService.shared.processAudioBuffer(
+                    buffer: buffer,
+                    sampleRate: Float(buffer.format.sampleRate),
+                    elapsedTime: Date().timeIntervalSinceReferenceDate
+                )
+                let speakerId = res.speakerId
+                let isNewTurn = res.isNewTurn
+
+                Task { @MainActor [weak self] in
+                    guard let self = self, self.isRecording, !self.isPaused else { return }
+                    self.activeMicSpeakerId = speakerId
+                    if isNewTurn {
+                        self.isMicNewTurnPending = true
+                    }
+                }
             }
-        }
+        )
 
         installMeetingMicTap(on: inputNode, bus: 0, format: format, relay: relay)
         self.isMicTapInstalled = true
@@ -445,7 +486,7 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
                         guard let self = self, self.isRecording, !self.isPaused else { return }
                         if let result = result {
                             let text = result.bestTranscription.formattedString
-                            self.handleSpeechTranscription(text: text, speaker: .remote, isFinal: result.isFinal)
+                            self.handleSpeechTranscription(channel: .systemAudio, fullRawText: text, isRecognizerFinal: result.isFinal)
                         }
                     }
                 }
@@ -453,11 +494,22 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
 
             let relay = SystemAudioRelay(request: sysRequest)
             let output = SystemAudioCaptureOutput { [weak self] sampleBuffer in
-                // 1. Calculate VU meter level from sample buffer
+                // 1. Calculate VU meter level and acoustic diarization from sample buffer on audio thread
                 let level = calculateSystemAudioLevel(sampleBuffer: sampleBuffer)
+                let res = SpeakerDiarizationService.shared.processCMSampleBuffer(
+                    sampleBuffer: sampleBuffer,
+                    elapsedTime: Date().timeIntervalSinceReferenceDate
+                )
+                let speakerId = res.speakerId
+                let isNewTurn = res.isNewTurn
+
                 Task { @MainActor [weak self] in
                     guard let self = self, self.isRecording, !self.isPaused else { return }
                     self.systemLevel = level
+                    self.activeSystemSpeakerId = speakerId
+                    if isNewTurn {
+                        self.isSystemNewTurnPending = true
+                    }
                 }
 
                 // 2. Feed into Speech Recognition
@@ -479,29 +531,126 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Speech Transcription Aggregation
-    private func handleSpeechTranscription(text: String, speaker: MeetingSpeaker, isFinal: Bool) {
-        let cleanText = filterPhantomSpeech(text)
+    // MARK: - Speech Transcription Aggregation (Meetily Plus Turn Segmentation)
+    private func handleSpeechTranscription(
+        channel: MeetingAudioChannel,
+        fullRawText: String,
+        isRecognizerFinal: Bool
+    ) {
+        let baseOffset = (channel == .microphone) ? micTextBaseOffset : systemTextBaseOffset
+        let isNewTurnPending = (channel == .microphone) ? isMicNewTurnPending : isSystemNewTurnPending
+        let speakerId = (channel == .microphone) ? activeMicSpeakerId : activeSystemSpeakerId
+
+        var currentSegment = ""
+        if fullRawText.count > baseOffset {
+            let startIdx = fullRawText.index(fullRawText.startIndex, offsetBy: baseOffset)
+            currentSegment = String(fullRawText[startIdx...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if fullRawText.count < baseOffset {
+            if channel == .microphone {
+                micTextBaseOffset = 0
+            } else {
+                systemTextBaseOffset = 0
+            }
+            currentSegment = fullRawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let cleanText = filterPhantomSpeech(currentSegment)
         guard !cleanText.isEmpty else { return }
+
         self.activeLiveTranscript = cleanText
-
         let currentElapsed = self.elapsedSeconds
+        let resolvedSpeaker = SpeakerDiarizationService.shared.resolveSpeaker(
+            channel: channel,
+            speakerId: speakerId,
+            mode: selectedMode,
+            attendees: attendees
+        )
 
-        // Check if we can append or update existing utterance
-        if let lastIndex = transcriptEntries.indices.last,
-           transcriptEntries[lastIndex].speaker == speaker,
-           !transcriptEntries[lastIndex].isFinal {
-            transcriptEntries[lastIndex].text = cleanText
-            transcriptEntries[lastIndex].isFinal = isFinal
+        let lastIndex = transcriptEntries.indices.last
+        let shouldStartNewTurn: Bool = {
+            guard let idx = lastIndex else { return false }
+            let lastEntry = transcriptEntries[idx]
+            if lastEntry.isFinal { return true }
+            if isNewTurnPending { return true }
+            if lastEntry.speaker != resolvedSpeaker { return true }
+            return false
+        }()
+
+        if shouldStartNewTurn, let idx = lastIndex, !transcriptEntries[idx].isFinal {
+            transcriptEntries[idx].isFinal = true
+            transcriptEntries[idx].duration = max(1.2, currentElapsed - transcriptEntries[idx].timestamp)
+
+            if channel == .microphone {
+                micTextBaseOffset = fullRawText.count
+                isMicNewTurnPending = false
+            } else {
+                systemTextBaseOffset = fullRawText.count
+                isSystemNewTurnPending = false
+            }
+
+            let newEntry = MeetingTranscriptEntry(
+                timestamp: currentElapsed,
+                duration: 1.5,
+                speaker: resolvedSpeaker,
+                text: cleanText,
+                isFinal: isRecognizerFinal
+            )
+            transcriptEntries.append(newEntry)
+        } else if let idx = lastIndex, !transcriptEntries[idx].isFinal, transcriptEntries[idx].speaker == resolvedSpeaker {
+            transcriptEntries[idx].text = cleanText
+            transcriptEntries[idx].duration = max(1.2, currentElapsed - transcriptEntries[idx].timestamp)
+            if isRecognizerFinal {
+                transcriptEntries[idx].isFinal = true
+                if channel == .microphone {
+                    micTextBaseOffset = fullRawText.count
+                } else {
+                    systemTextBaseOffset = fullRawText.count
+                }
+            }
         } else {
             let entry = MeetingTranscriptEntry(
                 timestamp: currentElapsed,
-                speaker: speaker,
+                duration: 1.5,
+                speaker: resolvedSpeaker,
                 text: cleanText,
-                isFinal: isFinal
+                isFinal: isRecognizerFinal
             )
             transcriptEntries.append(entry)
+            if isRecognizerFinal {
+                if channel == .microphone {
+                    micTextBaseOffset = fullRawText.count
+                } else {
+                    systemTextBaseOffset = fullRawText.count
+                }
+            }
         }
+    }
+
+    // MARK: - Speaker Management & Diarization Actions (Meetily Plus)
+    public func renameSpeaker(target: MeetingSpeaker, newName: String) {
+        SpeakerDiarizationService.shared.renameSpeakerInTranscript(
+            targetSpeaker: target,
+            newName: newName,
+            transcript: &transcriptEntries
+        )
+    }
+
+    public func splitTranscriptEntry(entryId: UUID, splitCharIndex: Int, newSpeaker: MeetingSpeaker) -> Bool {
+        return SpeakerDiarizationService.shared.splitTranscriptEntry(
+            entryId: entryId,
+            splitCharIndex: splitCharIndex,
+            newSpeaker: newSpeaker,
+            transcript: &transcriptEntries
+        )
+    }
+
+    public func disentangleWithAI() {
+        let disentangled = MeetingAIService.shared.disentangleSpeakersWithAI(
+            transcript: transcriptEntries,
+            attendees: attendees,
+            mode: selectedMode
+        )
+        self.transcriptEntries = disentangled
     }
 
     private func filterPhantomSpeech(_ text: String) -> String {
