@@ -138,10 +138,12 @@ public final class SpeakerDiarizationService: @unchecked Sendable {
         }
 
         let rms = sqrt(sum / Float(count))
-        let isSilence = (rms < 0.015)
+        let isSilence = (rms < 0.012)
 
         if isSilence {
-            lastPauseDetectedTime = elapsedTime
+            if lastPauseDetectedTime == 0 {
+                lastPauseDetectedTime = elapsedTime
+            }
             return (activeSpeakerId, false)
         }
 
@@ -155,9 +157,12 @@ public final class SpeakerDiarizationService: @unchecked Sendable {
         }
 
         let currentPitch = recentPitches.reduce(0, +) / Float(recentPitches.count)
-        let silenceDuration = elapsedTime - lastPauseDetectedTime
-        let isNewTurn = (silenceDuration >= 0.85 && lastSpeechTime > 0)
+        let wasInPause = (lastPauseDetectedTime > 0)
+        let silenceDuration = wasInPause ? (elapsedTime - lastPauseDetectedTime) : 0
+        let isNewTurn = (wasInPause && silenceDuration >= 0.85 && lastSpeechTime > 0)
 
+        // Reset pause detection since speech has resumed
+        lastPauseDetectedTime = 0
         lastSpeechTime = elapsedTime
 
         if isNewTurn {

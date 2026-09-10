@@ -94,7 +94,7 @@ public final class AudioRecordingService: NSObject, ObservableObject {
     }
 
     @discardableResult
-    public func startRecording(language: AppLanguage = .english, onTranscription: @escaping @MainActor (String) -> Void) -> Bool {
+    public func startRecording(language: AppLanguage = LocalizationService.shared.language, onTranscription: @escaping @MainActor (String) -> Void) -> Bool {
         _ = stopRecording()
 
         let locale = Locale(identifier: language.speechLocale)
@@ -112,12 +112,16 @@ public final class AudioRecordingService: NSObject, ObservableObject {
 
         let inputNode = engine.inputNode
         let bus = 0
-        let format = inputNode.inputFormat(forBus: bus)
+        var format = inputNode.inputFormat(forBus: bus)
 
-        guard format.sampleRate > 0, format.channelCount > 0 else {
-            print("Invalid audio input format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
-            cleanupEngine()
-            return false
+        if format.sampleRate <= 0 || format.channelCount <= 0 {
+            if let fallback = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) {
+                format = fallback
+            } else {
+                print("Invalid audio input format: sampleRate=\(format.sampleRate), channels=\(format.channelCount)")
+                cleanupEngine()
+                return false
+            }
         }
 
         // Create audio output file in attachments directory

@@ -29,6 +29,7 @@ public final class MeetingStudioWindowManager: NSObject, NSWindowDelegate {
         win.isMovableByWindowBackground = true
         win.minSize = NSSize(width: 780, height: 560)
         win.contentView = hostingView
+        win.isReleasedWhenClosed = false
         win.delegate = self
         win.center()
         win.setFrameAutosaveName("NotesMyMeetingStudioWindow")
@@ -39,11 +40,15 @@ public final class MeetingStudioWindowManager: NSObject, NSWindowDelegate {
     }
 
     public func close() {
-        window?.close()
-        window = nil
+        window?.orderOut(nil)
+    }
+
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
     }
 
     public func windowWillClose(_ notification: Notification) {
-        window = nil
+        // Keep window instance for instant restore without resetting meeting state
     }
 }

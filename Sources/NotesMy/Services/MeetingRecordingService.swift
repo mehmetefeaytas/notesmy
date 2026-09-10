@@ -541,18 +541,9 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         let isNewTurnPending = (channel == .microphone) ? isMicNewTurnPending : isSystemNewTurnPending
         let speakerId = (channel == .microphone) ? activeMicSpeakerId : activeSystemSpeakerId
 
-        var currentSegment = ""
-        if fullRawText.count > baseOffset {
-            let startIdx = fullRawText.index(fullRawText.startIndex, offsetBy: baseOffset)
-            currentSegment = String(fullRawText[startIdx...]).trimmingCharacters(in: .whitespacesAndNewlines)
-        } else if fullRawText.count < baseOffset {
-            if channel == .microphone {
-                micTextBaseOffset = 0
-            } else {
-                systemTextBaseOffset = 0
-            }
-            currentSegment = fullRawText.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
+        let safeOffset = min(baseOffset, fullRawText.count)
+        let startIdx = fullRawText.index(fullRawText.startIndex, offsetBy: safeOffset)
+        let currentSegment = String(fullRawText[startIdx...]).trimmingCharacters(in: .whitespacesAndNewlines)
 
         let cleanText = filterPhantomSpeech(currentSegment)
         guard !cleanText.isEmpty else { return }
@@ -567,27 +558,28 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         )
 
         let lastIndex = transcriptEntries.indices.last
-        let shouldStartNewTurn: Bool = {
-            guard let idx = lastIndex else { return false }
-            let lastEntry = transcriptEntries[idx]
-            if lastEntry.isFinal { return true }
-            if isNewTurnPending { return true }
-            if lastEntry.speaker != resolvedSpeaker { return true }
-            return false
-        }()
 
-        if shouldStartNewTurn, let idx = lastIndex, !transcriptEntries[idx].isFinal {
-            transcriptEntries[idx].isFinal = true
-            transcriptEntries[idx].duration = max(1.2, currentElapsed - transcriptEntries[idx].timestamp)
+        // If turn break is pending (due to conversational pause > 0.85s) or speaker identity changed
+        if let idx = lastIndex, !transcriptEntries[idx].isFinal {
+            if isNewTurnPending || transcriptEntries[idx].speaker != resolvedSpeaker {
+                // Finalize the previous speaker's utterance
+                transcriptEntries[idx].isFinal = true
+                transcriptEntries[idx].duration = max(1.2, currentElapsed - transcriptEntries[idx].timestamp)
 
-            if channel == .microphone {
-                micTextBaseOffset = fullRawText.count
-                isMicNewTurnPending = false
-            } else {
-                systemTextBaseOffset = fullRawText.count
-                isSystemNewTurnPending = false
+                // Advance baseOffset to fullRawText length so the new speaker gets fresh text
+                if channel == .microphone {
+                    micTextBaseOffset = fullRawText.count
+                    isMicNewTurnPending = false
+                } else {
+                    systemTextBaseOffset = fullRawText.count
+                    isSystemNewTurnPending = false
+                }
+                return
             }
+        }
 
+        // If previous entry was finalized (or list is empty), create new entry
+        if lastIndex == nil || transcriptEntries[lastIndex!].isFinal {
             let newEntry = MeetingTranscriptEntry(
                 timestamp: currentElapsed,
                 duration: 1.5,
@@ -596,32 +588,19 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
                 isFinal: isRecognizerFinal
             )
             transcriptEntries.append(newEntry)
-        } else if let idx = lastIndex, !transcriptEntries[idx].isFinal, transcriptEntries[idx].speaker == resolvedSpeaker {
+            if isRecognizerFinal {
+                if channel == .microphone { micTextBaseOffset = fullRawText.count }
+                else { systemTextBaseOffset = fullRawText.count }
+            }
+        } else {
+            // Update active bubble
+            let idx = lastIndex!
             transcriptEntries[idx].text = cleanText
             transcriptEntries[idx].duration = max(1.2, currentElapsed - transcriptEntries[idx].timestamp)
             if isRecognizerFinal {
                 transcriptEntries[idx].isFinal = true
-                if channel == .microphone {
-                    micTextBaseOffset = fullRawText.count
-                } else {
-                    systemTextBaseOffset = fullRawText.count
-                }
-            }
-        } else {
-            let entry = MeetingTranscriptEntry(
-                timestamp: currentElapsed,
-                duration: 1.5,
-                speaker: resolvedSpeaker,
-                text: cleanText,
-                isFinal: isRecognizerFinal
-            )
-            transcriptEntries.append(entry)
-            if isRecognizerFinal {
-                if channel == .microphone {
-                    micTextBaseOffset = fullRawText.count
-                } else {
-                    systemTextBaseOffset = fullRawText.count
-                }
+                if channel == .microphone { micTextBaseOffset = fullRawText.count }
+                else { systemTextBaseOffset = fullRawText.count }
             }
         }
     }
@@ -661,12 +640,12 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
 
         // Common macOS speech recognizer acoustic hallucination tokens when no speech has occurred yet
         let phantomWords: Set<String> = ["evet", "evet evet", "yes", "ıı", "hı", "hıhı", "ee", "e", "şey"]
-        if (elapsedSeconds < 4.5 || transcriptEntries.isEmpty) && phantomWords.contains(lowerPunct) {
+        if elapsedSeconds < 1.5 && transcriptEntries.isEmpty && phantomWords.contains(lowerPunct) {
             return ""
         }
 
         // If recognizer prepends "Evet, " or "Evet. " or "Evet " to the very beginning of the meeting
-        if (elapsedSeconds < 4.0 && transcriptEntries.isEmpty) {
+        if elapsedSeconds < 2.5 && transcriptEntries.isEmpty {
             let lower = trimmed.lowercased()
             if lower.hasPrefix("evet, ") {
                 let stripped = String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
