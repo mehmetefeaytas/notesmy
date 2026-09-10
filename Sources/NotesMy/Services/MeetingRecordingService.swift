@@ -3,7 +3,7 @@ import AVFoundation
 @preconcurrency import Speech
 import CoreGraphics
 import CoreMedia
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
 // MARK: - Safe Nonisolated Relay for System Audio Sample Buffers
 private final class SystemAudioRelay: @unchecked Sendable {
@@ -354,7 +354,17 @@ public final class MeetingRecordingService: NSObject, ObservableObject {
         }
 
         do {
-            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let content: SCShareableContent = try await withCheckedThrowingContinuation { cont in
+                SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { scContent, scError in
+                    if let scError = scError {
+                        cont.resume(throwing: scError)
+                    } else if let scContent = scContent {
+                        cont.resume(returning: scContent)
+                    } else {
+                        cont.resume(throwing: NSError(domain: "NotesMy", code: -1, userInfo: nil))
+                    }
+                }
+            }
             guard let display = content.displays.first else {
                 print("No display found for ScreenCaptureKit")
                 return false
