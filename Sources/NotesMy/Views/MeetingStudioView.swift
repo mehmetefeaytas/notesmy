@@ -380,7 +380,7 @@ public struct MeetingStudioView: View {
                 Spacer()
 
                 // Recording Controls
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     // Pause / Resume
                     Button {
                         if meetingService.isPaused {
@@ -389,13 +389,13 @@ public struct MeetingStudioView: View {
                             meetingService.pauseMeeting()
                         }
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: meetingService.isPaused ? "play.fill" : "pause.fill")
                             Text(meetingService.isPaused ? (isTR ? "Devam Et" : "Resume") : (isTR ? "Duraklat" : "Pause"))
                         }
-                        .font(.system(size: 12, weight: .semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
+                        .font(.system(size: 13, weight: .semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
                         .background(Color.secondary.opacity(0.12))
                         .cornerRadius(8)
                     }
@@ -405,14 +405,14 @@ public struct MeetingStudioView: View {
                     Button {
                         finishRecording()
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 7) {
                             Image(systemName: "sparkles")
                             Text(isTR ? "Bitir & EA ile Analiz Et" : "Finish & AI Synthesize")
                         }
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                         .background(Color.green)
                         .cornerRadius(8)
                     }
@@ -423,8 +423,11 @@ public struct MeetingStudioView: View {
                         meetingService.cancelMeeting()
                     } label: {
                         Image(systemName: "trash")
-                            .font(.system(size: 12))
+                            .font(.system(size: 14))
                             .foregroundColor(.secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color.secondary.opacity(0.08))
+                            .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
                     .help(isTR ? "İptal Et" : "Cancel")
@@ -537,7 +540,7 @@ public struct MeetingStudioView: View {
                 Spacer()
 
                 // Primary Save & Export Buttons
-                HStack(spacing: 10) {
+                HStack(spacing: 14) {
                     // Copy to clipboard
                     Button {
                         NSPasteboard.general.clearContents()
@@ -545,7 +548,8 @@ public struct MeetingStudioView: View {
                         showToast(isTR ? "Panoya kopyalandı!" : "Copied to clipboard!")
                     } label: {
                         Label(isTR ? "Kopyala" : "Copy", systemImage: "doc.on.doc")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(.vertical, 2)
                     }
                     .buttonStyle(.bordered)
 
@@ -559,7 +563,8 @@ public struct MeetingStudioView: View {
                         }
                     } label: {
                         Label(isTR ? "Dışa Aktar" : "Export", systemImage: "square.and.arrow.up")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(.vertical, 2)
                     }
                     .menuStyle(.borderedButton)
 
@@ -567,16 +572,16 @@ public struct MeetingStudioView: View {
                     Button {
                         saveAsNote()
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 7) {
                             Image(systemName: "square.and.arrow.down.fill")
                             Text(savedNote != nil ? (isTR ? "Notu Aç" : "Open Note") : (isTR ? "Not Olarak Kaydet" : "Save as Note"))
                         }
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
                         .background(Color.blue)
-                        .cornerRadius(7)
+                        .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
 
@@ -585,7 +590,8 @@ public struct MeetingStudioView: View {
                         resetToNewMeeting()
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
+                            .padding(.vertical, 2)
                     }
                     .buttonStyle(.bordered)
                     .help(isTR ? "Yeni Toplantı Başlat" : "Start New Meeting")
@@ -599,20 +605,20 @@ public struct MeetingStudioView: View {
 
             // Template Tabs
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(MeetingTemplate.allCases) { tpl in
                         Button {
                             self.selectedTemplate = tpl
                             regenerateTemplateContent()
                         } label: {
-                            HStack(spacing: 6) {
+                            HStack(spacing: 7) {
                                 Image(systemName: tpl.icon)
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 13))
                                 Text(tpl.title(isTurkish: isTR))
-                                    .font(.system(size: 12, weight: selectedTemplate == tpl ? .bold : .medium))
+                                    .font(.system(size: 12.5, weight: selectedTemplate == tpl ? .bold : .medium))
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
                             .background(selectedTemplate == tpl ? Color.blue.opacity(0.15) : Color.clear)
                             .foregroundColor(selectedTemplate == tpl ? .blue : .primary)
                             .cornerRadius(8)
@@ -625,7 +631,7 @@ public struct MeetingStudioView: View {
                     }
                 }
                 .padding(.horizontal, 18)
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
             }
             .background(Material.bar)
 
